@@ -39,6 +39,8 @@ FRAMING: set "framingAdequate" false ONLY when the face genuinely cannot be asse
 WRITE THE COPY:
 - headline: 6–10 words, calm and warm ("Your face is well supported, with two areas to discuss").
 - narrative: 2–3 short sentences, observational, UK English, second person. Mention one or two zones that are well supported as well as the main areas of change.
+- The headline and narrative MUST agree with the change scores you gave, because the report shows those scores as statuses: below 30 = "well supported" (left alone), 30–59 = "some change", 60+ = "noticeable change". Never describe a zone scored below 30 as soft, hollow or worth discussing, and never call a zone scored 30+ well supported. If you think a zone is worth discussing, score it 30 or more.
+- Refer to zones only by these names so the text matches the map: temples, under-eye hollows, cheeks (mid-face), lines beside your mouth, lips, lines at the corners of your mouth, chin, jawline. Do not use vague phrases such as "the area around your mouth".
 - encouragement: one line noting that a GMC-registered doctor confirms suitability at a free online consultation.
 
 HARD RULES — the report must never break these:
