@@ -328,6 +328,7 @@ export async function POST(request: Request): Promise<Response> {
     trackingQueued,
     routingEnsured: routing.ok && routing.tagged === true,
     webhookConfigured: Boolean(webhook),
+    opportunities: routing.opportunities,
     focusZones: payload.focusZones,
   };
   if (delivery.delivered) console.info("[lead]", log);
