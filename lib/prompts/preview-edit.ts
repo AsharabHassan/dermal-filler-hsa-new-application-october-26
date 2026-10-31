@@ -2,25 +2,25 @@ import type { Sex, ZoneKey } from "../types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The image-edit instruction for the personal "See the possible difference"
-// preview. SUBTLE and conservative, limited to the client's focus zones, and
+// preview. Visible but natural (never overdone), limited to the client's focus zones, and
 // sex-aware (never feminising for men). Pure; tested in test/preview.test.ts.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ZONE_EDIT: Record<ZoneKey, string> = {
-  temples: "gently soften the hollow at the temples beside the outer brows",
-  teartrough: "gently soften the shadowed groove between the lower eyelids and the cheeks",
-  cheeks: "gently restore a little mid-face volume at the front of the cheeks",
-  nasolabial: "very slightly soften the lines running from the sides of the nose to the mouth corners",
-  lips: "very slightly restore lip volume and border definition, keeping the natural lip shape",
-  marionette: "very slightly soften the shadows running down from the mouth corners",
-  chin: "add very slight chin projection for balance",
-  jawline: "very slightly sharpen the jaw edge from chin to ear",
+  temples: "visibly soften the hollow at the temples beside the outer brows",
+  teartrough: "clearly soften the shadowed groove between the lower eyelids and the cheeks, so the eyes look more rested",
+  cheeks: "restore noticeable mid-face volume at the front of the cheeks, lifting where light falls on the upper cheek",
+  nasolabial: "visibly soften the folds running from the sides of the nose to the mouth corners",
+  lips: "restore some lip volume and a clearer lip border, keeping the natural lip shape and proportions",
+  marionette: "visibly soften the shadows running down from the mouth corners",
+  chin: "add modest chin projection for better balance with the lower face",
+  jawline: "visibly sharpen and define the jaw edge from chin to ear",
 };
 
 const MALE_EDIT: Partial<Record<ZoneKey, string>> = {
-  cheeks: "very slightly restore lost volume at the front of the cheeks without adding roundness",
-  chin: "add very slight, square chin projection for structure",
-  jawline: "very slightly sharpen and define the jaw edge from chin to ear, keeping it masculine",
+  cheeks: "restore noticeable lost volume at the front of the cheeks without adding roundness",
+  chin: "add modest, square chin projection for structure",
+  jawline: "clearly sharpen and define the jaw edge from chin to ear, keeping it masculine",
 };
 
 export function buildPreviewPrompt(zones: ZoneKey[], sex: Sex | null): string {
@@ -33,7 +33,7 @@ export function buildPreviewPrompt(zones: ZoneKey[], sex: Sex | null): string {
     sex === "man"
       ? "Keep every feature masculine: no added cheek roundness, no lip enlargement, no softening of the jaw."
       : "",
-    "The result must look like the same photo taken on a good day: subtle, natural and realistic, as after a conservative, doctor-led dermal filler treatment.",
+    "The result must look like the same photo taken on a good day: a clear but natural, realistic improvement in the named areas, like a well-judged doctor-led dermal filler treatment. The difference should be easy to see side by side, never overdone.",
   ].filter(Boolean);
-  return `Edit this photo very subtly: ${edits.join("; ")}. ${guards.join(" ")}`;
+  return `Edit this photo: ${edits.join("; ")}. ${guards.join(" ")}`;
 }
