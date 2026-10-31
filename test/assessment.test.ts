@@ -61,7 +61,7 @@ describe("buildResult", () => {
   });
 
   it("swaps out any Claude copy that breaks the rules", () => {
-    const bad = assessment({}, {
+    const bad = assessment({ cheeks: 50 }, {
       narrative: { headline: "A perfect, flawless you", narrative: "Fine.", encouragement: "Ask about Botox too." },
     });
     bad.zones.lips.see = "Lips could look more attractive";

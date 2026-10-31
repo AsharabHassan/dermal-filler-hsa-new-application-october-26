@@ -349,6 +349,29 @@ export function causeNotes(mapped: MappedZone[]): string[] {
   return notes.slice(0, 3);
 }
 
+/** Names a summary bullet may use for each zone (map names + common variants). */
+const ZONE_MENTIONS: Record<ZoneKey, RegExp> = {
+  temples: /\btemples?\b/i,
+  teartrough: /\bunder-eye\b|\btear troughs?\b/i,
+  cheeks: /\bcheeks?\b|\bmid-face\b/i,
+  nasolabial: /lines? beside your mouth|nose to (your )?mouth|nasolabial/i,
+  lips: /\blips?\b/i,
+  marionette: /corners of your mouth|marionette/i,
+  chin: /\bchin\b/i,
+  jawline: /\bjaw(line)?\b/i,
+};
+const CHANGE_WORDS = /\b(flat\w*|hollow\w*|soft(en\w*|er)?|sag\w*|los[st]\w*|deeper|deepen\w*|fold\w*|heav\w*|thinn\w*|dip|groove|shadow\w*|touch of|slight\w*)\b/i;
+const SUPPORTED_WORDS = /well[- ]supported|well defined|left alone|leave (it|them)|in proportion|holding up|best left/i;
+
+/**
+ * True when a summary bullet describes change in a zone the map shows as well
+ * supported (the c21166c narrative/zone agreement rule, enforced in code).
+ */
+export function summaryContradicts(bullet: string, mapped: MappedZone[]): boolean {
+  if (SUPPORTED_WORDS.test(bullet) || !CHANGE_WORDS.test(bullet)) return false;
+  return mapped.some((z) => z.leaveAlone && ZONE_MENTIONS[z.key].test(bullet));
+}
+
 /** Laxity at or above this can make firmness the main story. */
 export const FIRMNESS_LAXITY_AT = 55;
 /** …when it also exceeds the largest volume change by this margin. */

@@ -12,6 +12,7 @@ import {
   leaveAloneLines,
   mapOrder,
   mapZones,
+  summaryContradicts,
   zoneStatus,
 } from "@/lib/zones";
 import { findingLine } from "@/lib/finding";
@@ -159,5 +160,31 @@ describe("finding line", () => {
   it("is honest when nothing needs adding, or when firmness dominates", () => {
     expect(findingLine({ focusZones: [], leaveAloneZones: ["lips"], firmnessDominant: false })).toMatch(/well supported/);
     expect(findingLine({ focusZones: ["jawline"], leaveAloneZones: [], firmnessDominant: true })).toMatch(/skin firmness/);
+  });
+});
+
+describe("summary / zone agreement (c21166c rule, enforced in code)", () => {
+  // Statuses from a real live read: under-eye, temples, lips, marionette well supported.
+  const mapped = mapZones(
+    assessment({ teartrough: 24, temples: 28, lips: 18, marionette: 22, cheeks: 38, nasolabial: 36, chin: 34, jawline: 40 }).zones,
+  );
+
+  it("drops a bullet that gives a well-supported zone a change", () => {
+    expect(
+      summaryContradicts(
+        "That adds to the soft fold in the lines beside your mouth and a touch of flatness near your under-eye hollows.",
+        mapped,
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps bullets that call well-supported zones well supported, or only describe focus zones", () => {
+    for (const ok of [
+      "Your cheeks have lost a little height at the front, so light catches slightly lower on your face.",
+      "Your under-eye hollows still look well supported, as the tone there is colour rather than lost volume.",
+      "Your jawline has softened a little as the skin loses firmness, while your lips and temples are well supported and best left alone.",
+    ]) {
+      expect(summaryContradicts(ok, mapped)).toBe(false);
+    }
   });
 });

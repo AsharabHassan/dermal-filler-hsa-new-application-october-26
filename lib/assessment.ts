@@ -8,7 +8,7 @@ import type {
   Priority,
   Sex,
 } from "./types";
-import { deriveZones } from "./zones";
+import { deriveZones, summaryContradicts } from "./zones";
 import { buildPlan } from "./plan";
 import { violations } from "./copy-guard";
 
@@ -67,7 +67,9 @@ export function buildResult(
   // Every Claude-written field is shown to the client — blank any that break
   // the copy rules (the UI then falls back to the clinic's own static copy).
   const zones = derived.zones.map(cleanZone);
-  const summary = assessment.summary.filter((b) => violations(b).length === 0);
+  const summary = assessment.summary.filter(
+    (b) => violations(b).length === 0 && !summaryContradicts(b, derived.zones),
+  );
   const { narrative, clean } = enforceCopyRules(assessment.narrative);
   return {
     ...derived,

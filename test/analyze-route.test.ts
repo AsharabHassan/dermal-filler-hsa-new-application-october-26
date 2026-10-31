@@ -44,7 +44,7 @@ describe("POST /api/analyze", () => {
 
   it("passes the sex answer to Claude and returns the summary, zone detail and measurements", async () => {
     mocks.scan.mockResolvedValue({ ...SIGNALS });
-    mocks.assess.mockResolvedValue(assessment({ jawline: 55 }));
+    mocks.assess.mockResolvedValue(assessment({ jawline: 55, cheeks: 60, nasolabial: 40 }));
     const json = await (await POST(req({ ...body, sex: "man" }))).json();
     expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({ sex: "man" }));
     expect(json.result.sex).toBe("man");
