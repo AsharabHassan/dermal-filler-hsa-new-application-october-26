@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import { after } from "next/server";
 import { z } from "zod";
 import {
   buildGhlPayload,
@@ -7,13 +8,15 @@ import {
   PRODUCTION_ORIGIN,
 } from "@/lib/ghl";
 import { serverEnv } from "@/lib/env";
-import { ensureLeadRoutingInGhl } from "@/lib/ghl-contact";
+import { ensureLeadRoutingInGhl, recheckLeadOpportunities } from "@/lib/ghl-contact";
 import { CALL_TIME_KEYS } from "@/lib/consultation-consent";
 import type { Lead } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const DELIVERY_ATTEMPTS = 3;
+/** The clinic's new-contact automation can file its own card a few seconds after us. */
+const ROUTING_RECHECK_MS = 20_000;
 const WEBHOOK_TIMEOUT_MS = 5_000;
 
 const shortText = z.string().trim().min(1).max(200);
@@ -333,6 +336,15 @@ export async function POST(request: Request): Promise<Response> {
   };
   if (delivery.delivered) console.info("[lead]", log);
   else console.warn("[lead]", log);
+
+  const contactId = routing.contactId;
+  if (contactId) {
+    after(async () => {
+      await new Promise((resolve) => setTimeout(resolve, ROUTING_RECHECK_MS));
+      const opportunities = await recheckLeadOpportunities(contactId, body.lead);
+      console.info("[lead] routing recheck", { opportunities });
+    });
+  }
 
   return Response.json({
     ok: true,

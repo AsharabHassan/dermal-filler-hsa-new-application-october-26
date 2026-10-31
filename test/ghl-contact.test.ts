@@ -84,6 +84,7 @@ describe("ensureLeadRoutingInGhl", () => {
     expect(result).toEqual({
       ok: true,
       tagged: true,
+      contactId: "c-9",
       opportunities: { callCenter: "created", treatment: "created" },
     });
     const posts = fetchMock.mock.calls
@@ -145,7 +146,53 @@ describe("ensureLeadRoutingInGhl", () => {
     expect(result).toEqual({
       ok: true,
       tagged: true,
+      contactId: "c-9",
       opportunities: { callCenter: "error: search 403", treatment: "error: search 403" },
+    });
+  });
+
+  it("moves the clinic's generic New Lead card to Dermal Filler, and nothing else", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({ contact: { id: "c-9" } }))
+      .mockResolvedValueOnce(json({}))
+      .mockResolvedValueOnce(
+        json({
+          opportunities: [
+            {
+              id: "cc-1",
+              contactId: "c-9",
+              pipelineId: "Bcc3ems7Jv3dsdmyMzLO",
+              pipelineStageId: "db7a12aa-d3d4-4df3-a565-f1fa516829f3",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        json({
+          opportunities: [
+            {
+              id: "tr-1",
+              contactId: "c-9",
+              pipelineId: "YKRFI1eaFuYA3auaZKqJ",
+              pipelineStageId: "f974c55a-806d-404d-9833-034f57ea35ff",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(json({}));
+
+    const result = await ensureLeadRoutingInGhl({
+      lead,
+      source: "Facial Volume Scan · London",
+      tags: ["dermal-fillers-analyzer"],
+    });
+
+    expect(result.opportunities).toEqual({ callCenter: "exists", treatment: "moved" });
+    const puts = fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT");
+    expect(puts).toHaveLength(1);
+    expect(puts[0][0]).toBe("https://services.leadconnectorhq.com/opportunities/tr-1");
+    expect(JSON.parse(puts[0][1].body)).toEqual({
+      pipelineStageId: "e9a36dc5-95d4-4712-b860-6b273391e870",
     });
   });
 });
