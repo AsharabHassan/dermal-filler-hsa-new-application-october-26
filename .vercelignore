@@ -1,0 +1,17 @@
+# Only application source and public assets belong in a Vercel upload.
+.git
+.next
+.vercel
+node_modules
+.tmp
+out
+coverage
+docker
+certificates
+.claude
+.agents
+**/.env*
+**/*.pem
+**/*.key
+**/*.log
+**/*.tsbuildinfo

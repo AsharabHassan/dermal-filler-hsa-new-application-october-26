@@ -1,0 +1,73 @@
+import type { AnalyzeRequest, FillerHistory, Priority } from "@/lib/types";
+import { assessPhoto } from "@/lib/anthropic";
+import { buildResult, type AnalyzeResponse } from "@/lib/assessment";
+import { SkinScanError, skinScanFillers } from "@/lib/skinscan";
+import { isZoneKey } from "@/lib/zones";
+
+export const runtime = "nodejs";
+// SkinScan /fillers (Derm Foundation on CPU ~19 s, one retry) + Claude.
+export const maxDuration = 90;
+
+const HISTORY: FillerHistory[] = ["no", "yes_happy", "yes_unhappy", "not_sure"];
+const PRIORITY: Priority[] = ["less_tired", "subtle_definition", "fix_previous", "not_sure"];
+
+function fail(error: Extract<AnalyzeResponse, { ok: false }>["error"], status: number) {
+  return Response.json({ ok: false, error } satisfies AnalyzeResponse, { status });
+}
+
+// POST /api/analyze — HSA SkinScan /fillers (REQUIRED) → Claude Vision → report.
+// No report is produced without SkinScan: an unreachable / timed-out / failing
+// scan returns { ok:false } and the client offers "try again / retake photo".
+// The image lives only in this request scope and is never persisted or logged.
+export async function POST(request: Request): Promise<Response> {
+  let body: AnalyzeRequest;
+  try {
+    body = (await request.json()) as AnalyzeRequest;
+  } catch {
+    return Response.json({ ok: false, error: "invalid json" }, { status: 400 });
+  }
+
+  const { imageBase64, imageMediaType = "image/jpeg", imageConsent } = body;
+  if (!imageBase64 || imageConsent !== true) {
+    return Response.json({ ok: false, error: "photo and consent required" }, { status: 400 });
+  }
+  const fillerHistory = HISTORY.includes(body.fillerHistory as FillerHistory)
+    ? (body.fillerHistory as FillerHistory)
+    : null;
+  const priority = PRIORITY.includes(body.priority as Priority) ? (body.priority as Priority) : null;
+
+  let signals;
+  try {
+    signals = await skinScanFillers(imageBase64);
+  } catch (err) {
+    const reason = err instanceof SkinScanError ? err.reason : "network";
+    console.error("[api/analyze] SkinScan /fillers failed — no report produced:", {
+      event: "skinscan_failed",
+      reason,
+      detail: err instanceof Error ? err.message : String(err),
+    });
+    return reason === "no_face" ? fail("no_face", 422) : fail("scan_unavailable", 503);
+  }
+
+  try {
+    const assessment = await assessPhoto({
+      imageBase64,
+      imageMediaType,
+      signals,
+      fillerHistory,
+      priority,
+    });
+    // Zones SkinScan found outside the photo frame are never read, whatever
+    // Claude says: they are checked at the consultation instead.
+    const notVisible = (signals.zones_not_visible ?? []).filter(isZoneKey);
+    assessment.zonesObscured = Array.from(new Set([...assessment.zonesObscured, ...notVisible]));
+    const result = buildResult(assessment, { fillerHistory, priority, skinScanUsed: true });
+    return Response.json({ ok: true, result } satisfies AnalyzeResponse);
+  } catch (err) {
+    console.error("[api/analyze] Claude assessment failed — no report produced:", {
+      event: "assessment_failed",
+      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    });
+    return fail("analysis_failed", 502);
+  }
+}

@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   HSA Facial Volume Scan — "Still you." Bright, luminous beige + gold. Never dark.
+   Token NAMES are kept from the other HSA apps so component classes resolve:
+   `peach*` = the gold accent family; `cream*` = the light page surfaces;
+   `heading`/`body` = warm dark text on light; `ink` = deep umber (button text,
+   photo overlays).
+   ─────────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-peach: #c29a3a;
+  --color-peach-light: #e2c47a;
+  --color-peach-deep: #9a7426;
+  --color-gold: #c29a3a;
+  --color-gold-soft: #e9d39a;
+
+  --color-cream: #fbf7f0;
+  --color-cream-deep: #f2e9da;
+
+  --color-sage: #9fb0a6;
+  --color-sage-deep: #61766c;
+
+  --color-heading: #2b2218;
+  --color-body: #5d5244;
+
+  --color-ink: #2b2218;
+  --color-ivory: #fffdf8;
+  --color-ivory-deep: #efe5d3;
+  --color-umber: #2b2218;
+  --color-umber-soft: #5f574a;
+
+  --font-serif: var(--font-playfair), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-montserrat), Helvetica, Arial, sans-serif;
+
+  --radius-xl2: 1.75rem;
+
+  --shadow-soft: 0 22px 50px -30px rgba(120, 90, 40, 0.35);
+  --shadow-glow: 0 0 60px -18px rgba(194, 154, 58, 0.45);
+
+  --ease-cinematic: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background:
+    radial-gradient(120% 70% at 50% 0%, #fffaf0 0%, rgba(255, 250, 240, 0) 60%),
+    linear-gradient(180deg, #fbf7f0 0%, #f6eee1 100%);
+  background-attachment: fixed;
+  color: var(--color-body);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-serif);
+  color: var(--color-heading);
+  letter-spacing: -0.01em;
+}
+
+/* Gold metallic text — used for the wordmark and key headline accents */
+.text-gold-gradient {
+  background: linear-gradient(120deg, #8a6620 0%, #c29a3a 45%, #b08528 70%, #8a6620 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Subtle vignette helper used by cinematic sections */
+.bg-grain {
+  background-image: radial-gradient(
+    120% 120% at 50% 0%,
+    rgba(255, 250, 240, 0) 40%,
+    rgba(194, 154, 58, 0.08) 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* Lift the "Cookie settings" pill above the phone Book bar so the two never overlap. */
+@media (max-width: 639px) {
+  body[data-sticky-booking] [data-cookie-pill] {
+    bottom: 5.75rem;
+  }
+}
