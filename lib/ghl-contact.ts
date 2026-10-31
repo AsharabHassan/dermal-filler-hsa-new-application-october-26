@@ -33,7 +33,7 @@ export const LEAD_OPPORTUNITIES = [
 ] as const;
 
 type OpportunityTarget = (typeof LEAD_OPPORTUNITIES)[number];
-export type OpportunityOutcome = "created" | "exists" | "error";
+export type OpportunityOutcome = "created" | "exists" | `error${string}`;
 
 export interface LeadRoutingResult {
   ok: boolean;
@@ -62,7 +62,7 @@ async function ensureOpportunity(
       pipeline_id: target.pipelineId,
     });
     const found = await fetch(`${BASE}/opportunities/search?${query}`, { headers: auth });
-    if (!found.ok) return "error";
+    if (!found.ok) return `error: search ${found.status}`;
     const data = (await found.json().catch(() => ({}))) as {
       opportunities?: { pipelineId?: string; contactId?: string }[];
     };
@@ -84,9 +84,9 @@ async function ensureOpportunity(
         source: "Facial Volume Scan",
       }),
     });
-    return created.ok ? "created" : "error";
-  } catch {
-    return "error";
+    return created.ok ? "created" : `error: create ${created.status}`;
+  } catch (error) {
+    return `error: ${error instanceof Error ? error.message : "network"}`;
   }
 }
 

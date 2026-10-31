@@ -145,7 +145,7 @@ describe("ensureLeadRoutingInGhl", () => {
     expect(result).toEqual({
       ok: true,
       tagged: true,
-      opportunities: { callCenter: "error", treatment: "error" },
+      opportunities: { callCenter: "error: search 403", treatment: "error: search 403" },
     });
   });
 });
