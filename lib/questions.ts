@@ -1,4 +1,11 @@
-import type { FillerHistory, Priority } from "./types";
+import type { FillerHistory, Priority, Sex } from "./types";
+
+/** "Which best describes you?" — asked before the scan; never inferred from the photo. */
+export const SEX_OPTIONS: readonly { key: Sex; label: string }[] = [
+  { key: "woman", label: "Woman" },
+  { key: "man", label: "Man" },
+  { key: "prefer_not", label: "Prefer not to say" },
+];
 
 /** "Had filler before?" — asked before the scan, sent to GHL + Claude. */
 export const FILLER_HISTORY_OPTIONS: readonly { key: FillerHistory; label: string }[] = [

@@ -4,6 +4,7 @@ import type {
   PlanItem,
   PlanPreview,
   Priority,
+  Sex,
   ZoneKey,
 } from "./types";
 import { OFFER, PRICE_AT_CONSULTATION, ZONE_PRICING, FIRMNESS_TREATMENT } from "./constants";
@@ -21,7 +22,10 @@ import { ZONES } from "./zones";
 //  4. At most three areas start at the first visit; the rest are reviewed later.
 //  5. When skin firmness dominates, the jawline and marionette areas wait —
 //     firming the skin may suit better than filler there.
-//  6. Prices are "from" prices, final at consultation; unpublished prices read
+//  6. Men: jaw / chin / temples / tear troughs come first, and lips or cheeks
+//     are only planned when the change is clearly noticeable — the plan never
+//     adds shape that would feminise the face.
+//  7. Prices are "from" prices, final at consultation; unpublished prices read
 //     "Price confirmed at your consultation", never "£0".
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -54,6 +58,16 @@ const WAITS_FOR: Partial<Record<ZoneKey, ZoneKey[]>> = {
 
 const FIRMNESS_LED: ZoneKey[] = ["jawline", "marionette"];
 
+/** For men: structure first. */
+const MALE_FOCUS: ZoneKey[] = ["jawline", "chin", "temples", "teartrough"];
+/** For men these are only planned when the change is clearly noticeable. */
+const MALE_NOTICEABLE_ONLY: ZoneKey[] = ["lips", "cheeks"];
+
+/** True when a zone is not planned for a man because the change isn't clearly noticeable. */
+export function maleHoldBack(zone: MappedZone, sex: Sex | null | undefined): boolean {
+  return sex === "man" && MALE_NOTICEABLE_ONLY.includes(zone.key) && zone.status !== "noticeable_change";
+}
+
 const gbp = new Intl.NumberFormat("en-GB", {
   style: "currency",
   currency: "GBP",
@@ -85,11 +99,15 @@ export function buildPlan(params: {
   firmnessDominant: boolean;
   fillerHistory: FillerHistory | null;
   priority: Priority | null;
+  sex?: Sex | null;
 }): PlanPreview {
   const { zones, firmnessDominant } = params;
-  const boosted = new Set(params.priority ? PRIORITY_ZONES[params.priority] : []);
+  const boosted = new Set([
+    ...(params.priority ? PRIORITY_ZONES[params.priority] : []),
+    ...(params.sex === "man" ? MALE_FOCUS : []),
+  ]);
   const candidates = zones
-    .filter((z) => !z.obscured && !z.leaveAlone && z.status !== "well_supported")
+    .filter((z) => !z.obscured && !z.leaveAlone && z.status !== "well_supported" && !maleHoldBack(z, params.sex))
     .sort((a, b) => {
       const ba = boosted.has(a.key) ? 0 : 1;
       const bb = boosted.has(b.key) ? 0 : 1;
@@ -104,7 +122,7 @@ export function buildPlan(params: {
     const waitsOn = (WAITS_FOR[z.key] ?? []).filter((k) => planned.has(k));
     let stage: PlanItem["stage"] = "start";
     let why: string;
-    if (firmnessDominant && FIRMNESS_LED.includes(z.key)) {
+    if ((firmnessDominant && FIRMNESS_LED.includes(z.key)) || z.cause === "firmness") {
       stage = "review";
       why = `Firming the skin may help here more than volume. Your doctor may suggest ${FIRMNESS_TREATMENT} or a skin-quality treatment first.`;
     } else if (waitsOn.length > 0) {
@@ -193,3 +211,49 @@ export function historyLine(history: FillerHistory | null, priority: Priority | 
 
 /** The honest non-filler line, shown when skin firmness dominates. */
 export const FIRMNESS_LINE = `Your main change looks like skin firmness rather than volume. ${FIRMNESS_TREATMENT} or a skin-quality treatment may suit you better than filler, and your doctor will be honest about that at your consultation.`;
+
+export interface ZoneHelp {
+  kind: "leave_alone" | "filler" | "filler_later" | "firmness" | "consultation";
+  /** Authoritative heading for the "What could help" block. */
+  title: string;
+  /** Rule-based detail (volume / price / staging) shown under the heading. */
+  detail: string | null;
+}
+
+/**
+ * "What could help" for one zone — decided by the rules, never by Claude, so
+ * the card can't contradict the map or the plan. Claude's tailored sentence is
+ * shown underneath only for filler / firmness outcomes.
+ */
+export function zoneHelp(
+  zone: MappedZone,
+  ctx: { plan: PlanPreview; sex?: Sex | null },
+): ZoneHelp {
+  if (zone.obscured) {
+    return { kind: "consultation", title: "Checked at your consultation", detail: null };
+  }
+  if (zone.leaveAlone) {
+    return {
+      kind: "leave_alone",
+      title: zone.appearsFull ? "Leave alone — it already looks full" : "Leave alone",
+      detail: null,
+    };
+  }
+  if (maleHoldBack(zone, ctx.sex)) {
+    return {
+      kind: "leave_alone",
+      title: "Usually best left as it is",
+      detail: "We'd only add volume here if it had clearly been lost.",
+    };
+  }
+  const item = ctx.plan.items.find((i) => i.zone === zone.key);
+  if (!item) return { kind: "consultation", title: "Talk it through at your consultation", detail: null };
+  if (/Nu Sculpt/.test(item.why)) {
+    return { kind: "firmness", title: `Firming the skin: ${FIRMNESS_TREATMENT} or a skin-quality treatment`, detail: "Filler may not be the answer here." };
+  }
+  const volume = `${item.volumeText.charAt(0).toUpperCase()}${item.volumeText.slice(1)} · ${item.priceText}`;
+  if (item.stage === "review") {
+    return { kind: "filler_later", title: "Review once your first areas have settled", detail: `${item.why} If still needed: ${volume.charAt(0).toLowerCase()}${volume.slice(1)}.` };
+  }
+  return { kind: "filler", title: "Filler, started small", detail: volume };
+}

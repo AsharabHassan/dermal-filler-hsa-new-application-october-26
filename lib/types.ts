@@ -36,6 +36,12 @@ export type Priority =
   | "fix_previous"
   | "not_sure";
 
+/** "Which best describes you?" — asked before the scan; never inferred from the photo. */
+export type Sex = "woman" | "man" | "prefer_not";
+
+/** What mainly drives a zone's change. */
+export type ZoneCause = "none" | "volume" | "firmness" | "mixed";
+
 /** Jowl grade (from the Endomax lower-face logic) — a skin-firmness signal. */
 export type JowlGrade = "none" | "mild" | "moderate" | "advanced" | "unclear";
 
@@ -45,8 +51,16 @@ export interface ZoneRead {
   change: number;
   /** True when the zone already looks full (often previous filler) — never add here. */
   appearsFull: boolean;
-  /** Short cosmetic observation written to the person ("a soft hollow at the temple"). */
-  note: string;
+  /** What mainly drives the change here (volume vs skin firmness). */
+  cause: ZoneCause;
+  /** "What we see": 1–2 specific sentences about THIS photo. */
+  see: string;
+  /** "Why it happens": 1 sentence tailored to the observation. */
+  why: string;
+  /** "What could help": 1 sentence (filler / leave alone / firming the skin). */
+  help: string;
+  /** "What filler could do here" — benefit-led, subtle, temporary (focus zones only). */
+  benefit: string;
 }
 
 /** A zone after mapping — what the report renders. */
@@ -58,7 +72,22 @@ export interface MappedZone {
   obscured: boolean;
   /** True when the report explicitly says "we wouldn't add volume here". */
   leaveAlone: boolean;
-  note: string;
+  cause: ZoneCause;
+  see: string;
+  why: string;
+  help: string;
+  benefit: string;
+}
+
+/** One plain-language HSA SkinScan measurement — a measurement, never a score of the person. */
+export interface Measurement {
+  key: string;
+  label: string;
+  /** "1 : 1.5", "low", "moderate", "higher", "smooth"… */
+  value: string;
+  /** Context such as "balanced range ≈ 1 : 1.6". */
+  detail?: string;
+  source: "geometry" | "undereye_measure" | "endolift_model" | "derm_foundation" | "skin_measure" | "combined";
 }
 
 /** The narrative portion Claude authors. */
@@ -80,6 +109,8 @@ export interface PhotoAssessment {
   framingAdequate: boolean;
   /** True when the photo looks like it shows previous filler somewhere. */
   previousWorkVisible: boolean;
+  /** "What's happening to your face": 3–5 plain-English findings for THIS face. */
+  summary: string[];
   narrative: ClaudeNarrative;
 }
 
@@ -129,6 +160,10 @@ export interface AnalyzeResult {
   framingAdequate: boolean;
   previousWorkVisible: boolean;
   narrative: ClaudeNarrative;
+  /** "What's happening to your face" bullets (3–5). */
+  summary: string[];
+  /** "Your scan measurements" (HSA SkinScan), plain language. */
+  measurements: Measurement[];
   narrativeSource: "claude" | "fallback";
   usedPhoto: boolean;
   /** Whether HSA SkinScan signals were available for this read. */
@@ -137,6 +172,7 @@ export interface AnalyzeResult {
   /** Echo of the pre-scan answers that shaped the report. */
   fillerHistory: FillerHistory | null;
   priority: Priority | null;
+  sex: Sex | null;
 }
 
 /** Lead captured at the gate. */
@@ -155,6 +191,7 @@ export interface AnalyzeRequest {
   imageConsent: boolean;
   fillerHistory?: FillerHistory | null;
   priority?: Priority | null;
+  sex?: Sex | null;
 }
 
 /** Browser-readable attribution only. Conversion identity is server-owned. */
@@ -196,6 +233,7 @@ export interface LeadRequest {
   ageConfirmed: true;
   fillerHistory: FillerHistory;
   priority: Priority;
+  sex: Sex;
   consultationContactConsent?: true;
   consultationContactConsentAt?: string;
   consultationContactStatement?: string;

@@ -46,13 +46,13 @@ describe("zone mapping", () => {
   });
 
   it("a zone that already looks full is well supported and left alone, whatever was scored", () => {
-    const lips = mapZones({ lips: { change: 80, appearsFull: true, note: "" } }).find((z) => z.key === "lips")!;
+    const lips = mapZones({ lips: { change: 80, appearsFull: true, cause: "volume", see: "", why: "", help: "", benefit: "" } }).find((z) => z.key === "lips")!;
     expect(lips.status).toBe("well_supported");
     expect(lips.leaveAlone).toBe(true);
   });
 
   it("an obscured zone is never left alone and never a focus", () => {
-    const mapped = mapZones({ chin: { change: 70, appearsFull: false, note: "" } }, ["chin", "temples"]);
+    const mapped = mapZones({ chin: { change: 70, appearsFull: false, cause: "volume", see: "", why: "", help: "", benefit: "" } }, ["chin", "temples"]);
     const chin = mapped.find((z) => z.key === "chin")!;
     const temples = mapped.find((z) => z.key === "temples")!;
     expect(chin.obscured).toBe(true);

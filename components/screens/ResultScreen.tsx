@@ -2,11 +2,14 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { Sparkles, Info, Download, Loader2 } from "lucide-react";
+import { Info, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWizard } from "@/store/wizard-store";
 import { NextStepCard } from "@/components/result/NextStepCard";
-import { FaceVolumeMap } from "@/components/result/FaceVolumeMap";
+import { FaceStory } from "@/components/result/FaceStory";
+import { FocusZones, SupportedZones } from "@/components/result/ZoneCards";
+import { PersonalPreview } from "@/components/result/PersonalPreview";
+import { ScanMeasurements } from "@/components/result/ScanMeasurements";
 import { LeaveAlonePanel } from "@/components/result/LeaveAlonePanel";
 import { PlanPreview } from "@/components/result/PlanPreview";
 import { HAS_RESULTS_GALLERY, ResultsGallery } from "@/components/result/ResultsGallery";
@@ -25,9 +28,11 @@ const reveal = (delay: number) => ({
 });
 
 /**
- * Report layout (pigmentation-app pattern): Summary → NextStepCard → face map
- * most-affected-first → leave-alone / cause / honesty notes → conservative plan
- * (the recommended-plan pitch, with the offer) → calendar → real results.
+ * Report order (owner-specified): NextStepCard (finding + offer) → What's
+ * happening to your face + photo/zone map → focus zone cards (what filler could
+ * do + real before/after) → personal AI preview → leave-alone zones → scan
+ * measurements → plan + offer → calendar. It should read like a bespoke
+ * consultation document.
  */
 export function ResultScreen() {
   const clinic = useClinicLocation();
@@ -71,85 +76,82 @@ export function ResultScreen() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 pb-28 pt-10 sm:pb-10">
-      <motion.div {...reveal(0)} className="flex flex-col items-center text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-peach/30 bg-peach/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-peach-deep">
-          <Sparkles size={13} /> Your pre-consultation report
-        </span>
-        <h2 className="mt-4 font-serif text-[32px] leading-tight text-heading sm:text-[40px]">
-          {narrative.headline}
-        </h2>
-        <p className="mt-3 max-w-lg text-[15.5px] leading-relaxed text-body">{narrative.narrative}</p>
-      </motion.div>
+    <div className="mx-auto w-full max-w-5xl px-5 pb-28 pt-10 sm:px-8 sm:pb-12">
+      <motion.header {...reveal(0)} className="mx-auto max-w-2xl text-center">
+        <p className="font-serif text-[17px] italic text-peach-deep">
+          Your pre-consultation report{lead?.firstName ? ` for ${lead.firstName}` : ""}
+        </p>
+        <h2 className="mt-3 font-serif text-[36px] leading-[1.05] text-heading sm:text-[48px]">{narrative.headline}</h2>
+        <p className="mx-auto mt-4 max-w-xl text-[15.5px] leading-relaxed text-body">{narrative.narrative}</p>
+      </motion.header>
 
-      <motion.div {...reveal(0.1)} className="mt-8">
+      <motion.div {...reveal(0.1)} className="mx-auto mt-10 max-w-3xl">
         <NextStepCard />
       </motion.div>
 
+      <motion.div {...reveal(0.2)} className="mt-16 sm:mt-20">
+        <FaceStory result={result} />
+      </motion.div>
+
       {result.makeupDetected && (
-        <motion.div
-          {...reveal(0.15)}
-          className="mt-6 flex items-start gap-2.5 rounded-2xl border border-sage/25 bg-sage/[0.06] px-4 py-3"
-        >
+        <div className="mx-auto mt-8 flex max-w-3xl items-start gap-2.5 rounded-2xl bg-sage/[0.08] px-4 py-3 ring-1 ring-sage/25">
           <Info size={16} className="mt-0.5 shrink-0 text-sage-deep" />
           <p className="text-[13px] leading-relaxed text-body">
-            <span className="font-semibold text-heading">Makeup noticed.</span>{" "}
-            Foundation or contouring can change how shadows and volume read in a
-            photo, so your doctor will look again at your consultation.
+            <span className="font-semibold text-heading">Makeup noticed.</span> Foundation or contouring can change how
+            shadows and volume read in a photo, so your doctor will look again at your consultation.
           </p>
-        </motion.div>
+        </div>
       )}
 
-      <motion.div {...reveal(0.2)} className="mt-10">
-        <FaceVolumeMap />
-      </motion.div>
+      <div className="mx-auto mt-16 max-w-3xl space-y-16 sm:mt-20 sm:space-y-20">
+        <FocusZones result={result} />
 
-      <motion.div {...reveal(0.3)} className="mt-8">
-        <LeaveAlonePanel result={result} />
-      </motion.div>
+        <PersonalPreview result={result} />
 
-      <motion.div {...reveal(0.4)} className="mt-10">
+        <section aria-labelledby="alone-heading">
+          <h3 id="alone-heading" className="font-serif text-[30px] leading-tight text-heading sm:text-[34px]">
+            What&rsquo;s holding up well
+          </h3>
+          <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-body">
+            Restore what time took, nothing it didn&rsquo;t. These areas are best left as they are.
+          </p>
+          <div className="mt-5">
+            <SupportedZones result={result} />
+          </div>
+          <div className="mt-6">
+            <LeaveAlonePanel result={result} />
+          </div>
+        </section>
+
+        <ScanMeasurements measurements={result.measurements} />
+
         <PlanPreview result={result} />
-      </motion.div>
 
-      <motion.div {...reveal(0.5)} className="mt-10">
         <BookingCalendar />
-      </motion.div>
 
-      {HAS_RESULTS_GALLERY && (
-        <motion.div {...reveal(0.6)} className="mt-10">
-          <ResultsGallery />
-        </motion.div>
-      )}
+        {HAS_RESULTS_GALLERY && <ResultsGallery />}
 
-      {REVIEWS.length > 0 && (
-        <motion.div {...reveal(0.7)} className="mt-10">
-          <Testimonials />
-        </motion.div>
-      )}
+        {REVIEWS.length > 0 && <Testimonials />}
 
-      <motion.div {...reveal(0.8)} className="mt-10">
-        <p className="mb-4 text-center text-[15px] font-medium text-heading">{narrative.encouragement}</p>
-        <BookingCTA label="Book my free consultation" showPhone={false} />
-      </motion.div>
-
-      <motion.div {...reveal(0.85)} className="mt-4 flex justify-center">
-        <Button variant="outline" onClick={downloadReport} disabled={downloading}>
-          {downloading ? (
-            <>
-              <Loader2 size={16} className="animate-spin" /> Preparing your report…
-            </>
-          ) : (
-            <>
-              <Download size={16} /> Download your report (PDF)
-            </>
-          )}
-        </Button>
-      </motion.div>
-
-      <motion.div {...reveal(0.9)}>
-        <DisclaimerBanner className="mt-8" />
-      </motion.div>
+        <div>
+          <p className="mb-4 text-center font-serif text-[20px] text-heading">{narrative.encouragement}</p>
+          <BookingCTA label="Book my free consultation" showPhone={false} />
+          <div className="mt-4 flex justify-center">
+            <Button variant="outline" onClick={downloadReport} disabled={downloading}>
+              {downloading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> Preparing your report…
+                </>
+              ) : (
+                <>
+                  <Download size={16} /> Download your report (PDF)
+                </>
+              )}
+            </Button>
+          </div>
+          <DisclaimerBanner className="mt-8" />
+        </div>
+      </div>
 
       <StickyBookingBar label="Book my free consultation" />
     </div>

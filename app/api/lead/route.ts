@@ -19,6 +19,7 @@ const WEBHOOK_TIMEOUT_MS = 5_000;
 const shortText = z.string().trim().min(1).max(200);
 const fillerHistory = z.enum(["no", "yes_happy", "yes_unhappy", "not_sure"]);
 const priority = z.enum(["less_tired", "subtle_definition", "fix_previous", "not_sure"]);
+const sex = z.enum(["woman", "man", "prefer_not"]);
 const zoneKey = z.enum([
   "temples",
   "teartrough",
@@ -66,7 +67,11 @@ const resultSchema = z
             appearsFull: z.boolean(),
             obscured: z.boolean(),
             leaveAlone: z.boolean(),
-            note: z.string().max(500),
+            cause: z.enum(["none", "volume", "firmness", "mixed"]),
+            see: z.string().max(600),
+            why: z.string().max(500),
+            help: z.string().max(500),
+            benefit: z.string().max(500),
           })
           .strict(),
       )
@@ -87,6 +92,20 @@ const resultSchema = z
         encouragement: z.string().max(2_000),
       })
       .strict(),
+    summary: z.array(z.string().max(400)).max(6),
+    measurements: z
+      .array(
+        z
+          .object({
+            key: z.string().max(40),
+            label: z.string().max(120),
+            value: z.string().max(80),
+            detail: z.string().max(200).optional(),
+            source: z.enum(["geometry", "undereye_measure", "endolift_model", "derm_foundation", "skin_measure", "combined"]),
+          })
+          .strict(),
+      )
+      .max(20),
     narrativeSource: z.enum(["claude", "fallback"]),
     usedPhoto: z.boolean(),
     skinScanUsed: z.boolean(),
@@ -116,6 +135,7 @@ const resultSchema = z
       .strict(),
     fillerHistory: fillerHistory.nullable(),
     priority: priority.nullable(),
+    sex: sex.nullable(),
   })
   .strict();
 
@@ -139,6 +159,7 @@ export const leadRequestSchema = z
     ageConfirmed: z.literal(true),
     fillerHistory,
     priority,
+    sex,
     // "I'm requesting a free consultation" — ticked before the scan. Optional
     // only so a tab opened before this release doesn't lose its lead.
     consultationContactConsent: z.literal(true).optional(),
@@ -268,6 +289,7 @@ export async function POST(request: Request): Promise<Response> {
     ageConfirmed: true,
     fillerHistory: body.fillerHistory,
     priority: body.priority,
+    sex: body.sex,
     consultationContact: body.consultationContactConsent
       ? {
           at: body.consultationContactConsentAt ?? submittedAt,

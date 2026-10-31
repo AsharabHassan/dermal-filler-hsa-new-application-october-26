@@ -2,8 +2,11 @@ import type {
   AnalyzeResult,
   ClaudeNarrative,
   FillerHistory,
+  MappedZone,
+  Measurement,
   PhotoAssessment,
   Priority,
+  Sex,
 } from "./types";
 import { deriveZones } from "./zones";
 import { buildPlan } from "./plan";
@@ -44,13 +47,27 @@ export function enforceCopyRules(n: ClaudeNarrative): { narrative: ClaudeNarrati
   return { narrative: out, clean };
 }
 
+function cleanZone(z: MappedZone): MappedZone {
+  const ok = (t: string) => (violations(t).length > 0 ? "" : t);
+  return { ...z, see: ok(z.see), why: ok(z.why), help: ok(z.help), benefit: ok(z.benefit) };
+}
+
 export function buildResult(
   assessment: PhotoAssessment,
-  opts: { fillerHistory: FillerHistory | null; priority: Priority | null; skinScanUsed: boolean },
+  opts: {
+    fillerHistory: FillerHistory | null;
+    priority: Priority | null;
+    skinScanUsed: boolean;
+    sex?: Sex | null;
+    measurements?: Measurement[];
+  },
 ): AnalyzeResult {
   const derived = deriveZones(assessment);
   // Zone notes are shown to the client too — drop any that break the rules.
-  const zones = derived.zones.map((z) => (violations(z.note).length > 0 ? { ...z, note: "" } : z));
+  // Every Claude-written field is shown to the client — blank any that break
+  // the copy rules (the UI then falls back to the clinic's own static copy).
+  const zones = derived.zones.map(cleanZone);
+  const summary = assessment.summary.filter((b) => violations(b).length === 0);
   const { narrative, clean } = enforceCopyRules(assessment.narrative);
   return {
     ...derived,
@@ -61,7 +78,9 @@ export function buildResult(
     framingAdequate: assessment.framingAdequate,
     previousWorkVisible: assessment.previousWorkVisible,
     narrative,
-    narrativeSource: clean ? "claude" : "fallback",
+    summary,
+    measurements: (opts.measurements ?? []).filter((m) => violations(`${m.label} ${m.value} ${m.detail ?? ""}`).length === 0),
+    narrativeSource: clean && summary.length === assessment.summary.length ? "claude" : "fallback",
     usedPhoto: true,
     skinScanUsed: opts.skinScanUsed,
     plan: buildPlan({
@@ -69,8 +88,10 @@ export function buildResult(
       firmnessDominant: derived.firmnessDominant,
       fillerHistory: opts.fillerHistory,
       priority: opts.priority,
+      sex: opts.sex ?? null,
     }),
     fillerHistory: opts.fillerHistory,
     priority: opts.priority,
+    sex: opts.sex ?? null,
   };
 }

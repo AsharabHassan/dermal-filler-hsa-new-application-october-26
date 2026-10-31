@@ -50,8 +50,8 @@ describe("copy rules — no forbidden words in user-facing copy", () => {
 
   it("generated copy is clean too", () => {
     const generated = [
-      ...leaveAloneLines(mapZones({ lips: { change: 5, appearsFull: true, note: "" } })),
-      ...Object.values(ZONES).flatMap((z) => [z.label, z.looksLike, z.cause, z.support]),
+      ...leaveAloneLines(mapZones({ lips: { change: 5, appearsFull: true, cause: "none", see: "", why: "", help: "", benefit: "" } })),
+      ...Object.values(ZONES).flatMap((z) => [z.label, z.looksLike, z.cause, z.support, z.benefit, z.area]),
       FIRMNESS_LINE,
       historyLine("yes_unhappy", null)!,
       historyLine("yes_happy", null)!,
@@ -61,6 +61,19 @@ describe("copy rules — no forbidden words in user-facing copy", () => {
       ...TRUST_MARKERS,
     ];
     for (const line of generated) expect(violations(line)).toEqual([]);
+  });
+
+  it("the copy guard runs on every new Claude field (summary, see, why, help, benefit)", async () => {
+    const { buildResult } = await import("@/lib/assessment");
+    const { assessment } = await import("./fixtures");
+    const bad = assessment({
+      cheeks: { change: 60, see: "A flawless cheek", why: "Ageing — you look older", help: "Try Botox", benefit: "A permanent lift" },
+    });
+    bad.summary = ["Your face will transform", "Your lips are in proportion."];
+    const r = buildResult(bad, { fillerHistory: null, priority: null, skinScanUsed: true });
+    const cheeks = r.zones.find((z) => z.key === "cheeks")!;
+    expect([cheeks.see, cheeks.why, cheeks.help, cheeks.benefit]).toEqual(["", "", "", ""]);
+    expect(r.summary).toEqual(["Your lips are in proportion."]);
   });
 
   it("the guard itself catches the banned words", () => {

@@ -38,6 +38,7 @@ export function LeadGateScreen() {
   const ageConfirmed = useWizard((s) => s.ageConfirmed);
   const fillerHistory = useWizard((s) => s.fillerHistory);
   const priority = useWizard((s) => s.priority);
+  const sex = useWizard((s) => s.sex);
   const setLead = useWizard((s) => s.setLead);
   const reveal = useWizard((s) => s.reveal);
   const goToStep = useWizard((s) => s.goToStep);
@@ -76,7 +77,7 @@ export function LeadGateScreen() {
 
     // The analysis already ran behind the scan loader. There is no fallback
     // report: without a real SkinScan-backed result, go back to "try again".
-    if (!result || !ageConfirmed || !fillerHistory || !priority) {
+    if (!result || !ageConfirmed || !fillerHistory || !priority || !sex) {
       setBusy(false);
       goToStep("scanfailed");
       return;
@@ -95,6 +96,7 @@ export function LeadGateScreen() {
       ageConfirmed: true,
       fillerHistory,
       priority,
+      sex,
       ...(contactConsent
         ? {
             consultationContactConsent: true as const,

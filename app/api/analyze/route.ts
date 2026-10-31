@@ -1,8 +1,9 @@
-import type { AnalyzeRequest, FillerHistory, Priority } from "@/lib/types";
+import type { AnalyzeRequest, FillerHistory, Priority, Sex } from "@/lib/types";
 import { assessPhoto } from "@/lib/anthropic";
 import { buildResult, type AnalyzeResponse } from "@/lib/assessment";
 import { SkinScanError, skinScanFillers } from "@/lib/skinscan";
 import { isZoneKey } from "@/lib/zones";
+import { buildMeasurements } from "@/lib/measurements";
 
 export const runtime = "nodejs";
 // SkinScan /fillers (Derm Foundation on CPU ~19 s, one retry) + Claude.
@@ -10,6 +11,7 @@ export const maxDuration = 90;
 
 const HISTORY: FillerHistory[] = ["no", "yes_happy", "yes_unhappy", "not_sure"];
 const PRIORITY: Priority[] = ["less_tired", "subtle_definition", "fix_previous", "not_sure"];
+const SEX: Sex[] = ["woman", "man", "prefer_not"];
 
 function fail(error: Extract<AnalyzeResponse, { ok: false }>["error"], status: number) {
   return Response.json({ ok: false, error } satisfies AnalyzeResponse, { status });
@@ -35,7 +37,9 @@ export async function POST(request: Request): Promise<Response> {
     ? (body.fillerHistory as FillerHistory)
     : null;
   const priority = PRIORITY.includes(body.priority as Priority) ? (body.priority as Priority) : null;
+  const sex = SEX.includes(body.sex as Sex) ? (body.sex as Sex) : null;
 
+  const started = Date.now();
   let signals;
   try {
     signals = await skinScanFillers(imageBase64);
@@ -56,12 +60,20 @@ export async function POST(request: Request): Promise<Response> {
       signals,
       fillerHistory,
       priority,
+      sex,
     });
     // Zones SkinScan found outside the photo frame are never read, whatever
     // Claude says: they are checked at the consultation instead.
     const notVisible = (signals.zones_not_visible ?? []).filter(isZoneKey);
     assessment.zonesObscured = Array.from(new Set([...assessment.zonesObscured, ...notVisible]));
-    const result = buildResult(assessment, { fillerHistory, priority, skinScanUsed: true });
+    const result = buildResult(assessment, {
+      fillerHistory,
+      priority,
+      sex,
+      skinScanUsed: true,
+      measurements: buildMeasurements(signals),
+    });
+    console.info("[api/analyze]", { event: "report_ready", ms: Date.now() - started, skinScanMs: signals.ms ?? null });
     return Response.json({ ok: true, result } satisfies AnalyzeResponse);
   } catch (err) {
     console.error("[api/analyze] Claude assessment failed — no report produced:", {

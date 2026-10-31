@@ -22,6 +22,7 @@ function ready() {
   s().setAgeConfirmed(true);
   s().setFillerHistory("yes_happy");
   s().setPriority("subtle_definition");
+  s().setSex("woman");
   s().setImage("b64", "image/jpeg");
 }
 
@@ -55,6 +56,10 @@ describe("wizard-store transitions", () => {
 
     s().setFillerHistory("not_sure");
     s().setPriority("less_tired");
+    s().beginScan();
+    expect(s().step).toBe("consent"); // blocked: "Which best describes you?" not answered
+
+    s().setSex("prefer_not");
     s().beginScan();
     expect(s().step).toBe("consent"); // blocked: 18+ not confirmed
 

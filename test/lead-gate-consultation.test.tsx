@@ -22,6 +22,7 @@ beforeEach(() => {
   useWizard.getState().setAgeConfirmed(true);
   useWizard.getState().setFillerHistory("yes_unhappy");
   useWizard.getState().setPriority("fix_previous");
+  useWizard.getState().setSex("man");
   useWizard.getState().goToLead();
   mocks.submit.mockResolvedValue(undefined);
   mocks.report.mockResolvedValue(undefined);
@@ -56,6 +57,7 @@ describe("consultation call request", () => {
       ageConfirmed: true,
       fillerHistory: "yes_unhappy",
       priority: "fix_previous",
+      sex: "man",
     }));
     expect(useWizard.getState().step).toBe("result");
   });
@@ -100,6 +102,7 @@ describe("clinic chooser", () => {
     useWizard.getState().setAgeConfirmed(true);
     useWizard.getState().setFillerHistory("no");
     useWizard.getState().setPriority("not_sure");
+    useWizard.getState().setSex("prefer_not");
     useWizard.getState().goToLead();
     render(
       <ClinicLocationProvider>

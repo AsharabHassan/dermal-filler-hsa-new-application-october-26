@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AnalyzeResult, FillerHistory, Lead, Priority } from "@/lib/types";
+import type { AnalyzeResult, FillerHistory, Lead, Priority, Sex } from "@/lib/types";
 import type { NormalizedPoint } from "@/components/scan/useFaceLandmarker";
 import type { CallTimeKey } from "@/lib/consultation-consent";
 import type { ScanFailure } from "@/lib/assessment";
@@ -28,6 +28,7 @@ interface WizardState {
   ageConfirmed: boolean;
   fillerHistory: FillerHistory | null;
   priority: Priority | null;
+  sex: Sex | null;
   callTime: CallTimeKey | null;
   imageBase64: string | null;
   imageMediaType: MediaType;
@@ -43,6 +44,7 @@ interface WizardState {
   setAgeConfirmed: (v: boolean) => void;
   setFillerHistory: (v: FillerHistory) => void;
   setPriority: (v: Priority) => void;
+  setSex: (v: Sex) => void;
   setCallTime: (t: CallTimeKey | null) => void;
   setImage: (base64: string, mediaType: MediaType) => void;
   setLandmarks: (pts: NormalizedPoint[] | null) => void;
@@ -72,6 +74,7 @@ const initial = {
   ageConfirmed: false,
   fillerHistory: null as FillerHistory | null,
   priority: null as Priority | null,
+  sex: null as Sex | null,
   callTime: null as CallTimeKey | null,
   imageBase64: null as string | null,
   imageMediaType: "image/jpeg" as MediaType,
@@ -99,6 +102,7 @@ export const useWizard = create<WizardState>((set, get) => ({
   setAgeConfirmed: (ageConfirmed) => set({ ageConfirmed }),
   setFillerHistory: (fillerHistory) => set({ fillerHistory }),
   setPriority: (priority) => set({ priority }),
+  setSex: (sex) => set({ sex }),
   setCallTime: (callTime) => set({ callTime }),
 
   setImage: (base64, mediaType) => set({ imageBase64: base64, imageMediaType: mediaType }),
@@ -107,7 +111,9 @@ export const useWizard = create<WizardState>((set, get) => ({
 
   canScan: () => {
     const s = get();
-    return s.contactConsent && s.ageConfirmed && s.fillerHistory !== null && s.priority !== null;
+    return (
+      s.contactConsent && s.ageConfirmed && s.sex !== null && s.fillerHistory !== null && s.priority !== null
+    );
   },
 
   beginScan: () => {

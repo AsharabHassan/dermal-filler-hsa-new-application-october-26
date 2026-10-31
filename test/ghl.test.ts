@@ -34,6 +34,7 @@ function buildOptions(overrides: Record<string, unknown> = {}) {
     ageConfirmed: true,
     fillerHistory: "no" as const,
     priority: "less_tired" as const,
+    sex: "woman" as const,
     ...overrides,
   };
 }
@@ -208,6 +209,7 @@ describe("lead request validation", () => {
     ageConfirmed: true,
     fillerHistory: "yes_happy",
     priority: "subtle_definition",
+    sex: "man",
     attribution: {
       fbp: null,
       fbc: null,

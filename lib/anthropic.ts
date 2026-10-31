@@ -5,6 +5,8 @@ import type {
   JowlGrade,
   PhotoAssessment,
   Priority,
+  Sex,
+  ZoneCause,
   ZoneKey,
   ZoneRead,
 } from "./types";
@@ -31,7 +33,17 @@ function getClient(): Anthropic {
 }
 
 export interface RawAssessment {
-  zones: { zone: string; change: number; appearsFull: boolean; note: string }[];
+  zones: {
+    zone: string;
+    change: number;
+    appearsFull: boolean;
+    cause?: string;
+    see?: string;
+    why?: string;
+    help?: string;
+    benefit?: string;
+  }[];
+  summary?: string[];
   zonesObscured: string[];
   skinLaxity: number;
   jowlGrade: string;
@@ -41,6 +53,12 @@ export interface RawAssessment {
   headline: string;
   narrative: string;
   encouragement: string;
+}
+
+const CAUSES: ZoneCause[] = ["none", "volume", "firmness", "mixed"];
+
+function str(v: unknown, max: number): string {
+  return typeof v === "string" ? v.trim().slice(0, max) : "";
 }
 
 function clamp(n: unknown): number {
@@ -60,7 +78,9 @@ export function parseAssessment(raw: RawAssessment): PhotoAssessment {
     throw new Error("malformed assessment");
   }
   const zones = {} as Record<ZoneKey, ZoneRead>;
-  for (const key of ZONE_ORDER) zones[key] = { change: 0, appearsFull: false, note: "" };
+  for (const key of ZONE_ORDER) {
+    zones[key] = { change: 0, appearsFull: false, cause: "none", see: "", why: "", help: "", benefit: "" };
+  }
   let seen = 0;
   for (const z of raw.zones) {
     if (!isZoneKey(z?.zone)) continue;
@@ -68,7 +88,11 @@ export function parseAssessment(raw: RawAssessment): PhotoAssessment {
     zones[z.zone] = {
       change: clamp(z.change),
       appearsFull: z.appearsFull === true,
-      note: typeof z.note === "string" ? z.note.trim().slice(0, 240) : "",
+      cause: CAUSES.includes(z.cause as ZoneCause) ? (z.cause as ZoneCause) : "volume",
+      see: str(z.see, 400),
+      why: str(z.why, 300),
+      help: str(z.help, 300),
+      benefit: str(z.benefit, 300),
     };
   }
   if (seen === 0) throw new Error("no zones in assessment");
@@ -80,6 +104,10 @@ export function parseAssessment(raw: RawAssessment): PhotoAssessment {
     makeupDetected: raw.makeupDetected === true,
     framingAdequate: raw.framingAdequate !== false,
     previousWorkVisible: raw.previousWorkVisible === true,
+    summary: (Array.isArray(raw.summary) ? raw.summary : [])
+      .map((b) => str(b, 260))
+      .filter(Boolean)
+      .slice(0, 5),
     narrative: {
       headline: raw.headline.trim(),
       narrative: raw.narrative.trim(),
@@ -101,9 +129,15 @@ const PRIORITY_TEXT: Record<Priority, string> = {
   not_sure: "Not sure",
 };
 
+const SEX_TEXT: Record<Sex, string> = {
+  woman: "Woman",
+  man: "Man",
+  prefer_not: "Prefer not to say",
+};
+
 /** The pre-scan answers as a note for the user turn. */
-export function answersNote(history: FillerHistory | null, priority: Priority | null): string {
-  return `The person's answers — Had filler before? ${history ? HISTORY_TEXT[history] : "not answered"}. What matters most? ${priority ? PRIORITY_TEXT[priority] : "not answered"}.`;
+export function answersNote(history: FillerHistory | null, priority: Priority | null, sex: Sex | null = null): string {
+  return `The person's answers — Which best describes you? ${sex ? SEX_TEXT[sex] : "not answered"}. Had filler before? ${history ? HISTORY_TEXT[history] : "not answered"}. What matters most? ${priority ? PRIORITY_TEXT[priority] : "not answered"}.`;
 }
 
 export async function assessPhoto(params: {
@@ -112,13 +146,14 @@ export async function assessPhoto(params: {
   signals: FillerSignals;
   fillerHistory: FillerHistory | null;
   priority: Priority | null;
+  sex: Sex | null;
 }): Promise<PhotoAssessment> {
   const env = serverEnv();
   const message = await getClient().messages.create({
     model: env.ANTHROPIC_MODEL,
     // Thinking counts toward max_tokens; Sonnet 5.5 runs adaptive thinking and
     // effort controls how much (same settings as the other HSA apps).
-    max_tokens: 8000,
+    max_tokens: 12000,
     system: [{ type: "text", text: SYSTEM_FILLERS, cache_control: { type: "ephemeral" } }],
     output_config: {
       effort: "low",
@@ -136,7 +171,7 @@ export async function assessPhoto(params: {
             type: "text",
             text: "Map volume and structure across the eight zones of this selfie and produce the pre-consultation report as the structured fields.",
           },
-          { type: "text", text: answersNote(params.fillerHistory, params.priority) },
+          { type: "text", text: answersNote(params.fillerHistory, params.priority, params.sex) },
           { type: "text", text: fillerSignalsNote(params.signals) },
         ],
       },

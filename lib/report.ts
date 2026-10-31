@@ -5,7 +5,7 @@ import type { NormalizedPoint } from "@/components/scan/useFaceLandmarker";
 import { visibleMarkers } from "./face-regions";
 import { CLINIC, DISCLAIMER, TREATMENT_NOTE, getClinicLocation } from "./constants";
 import { STATUS_LABEL, ZONES, causeNotes, leaveAloneLines, mapOrder } from "./zones";
-import { FIRMNESS_LINE, historyLine, offerLine } from "./plan";
+import { FIRMNESS_LINE, historyLine, offerLine, zoneHelp } from "./plan";
 import { findingLine } from "./finding";
 import { JOURNEY } from "./consultation-journey";
 import { buildReportPdf } from "./report-pdf";
@@ -83,13 +83,30 @@ export async function generateReportPdf(opts: {
     encouragement: result.narrative.encouragement,
     faceImageDataUrl: face?.url ?? null,
     faceImageAspect: face?.aspect,
-    zones: mapOrder(result.zones).map((z) => ({
-      label: ZONES[z.key].label,
-      status: STATUS_LABEL[z.status],
-      note: z.obscured ? "Hidden in your photo, checked at your consultation." : z.note || ZONES[z.key].looksLike,
-      leaveAlone: z.leaveAlone,
-      obscured: z.obscured,
+    summary: result.summary,
+    // jsPDF's built-in font has no "≈", so spell it out for the PDF.
+    measurements: result.measurements.map((m) => ({
+      label: m.label,
+      value: m.value,
+      detail: m.detail?.replace(/≈/g, "approx."),
     })),
+    zones: mapOrder(result.zones).map((z) => {
+      const help = zoneHelp(z, { plan: result.plan, sex: result.sex });
+      const fillerLed = help.kind === "filler" || help.kind === "filler_later";
+      return {
+        label: ZONES[z.key].label,
+        status: STATUS_LABEL[z.status],
+        see: z.obscured ? "Hidden in your photo, checked at your consultation." : z.see || ZONES[z.key].looksLike,
+        why: z.why || ZONES[z.key].cause,
+        help: [help.title, help.detail, help.kind === "filler" || help.kind === "firmness" ? z.help : ""]
+          .filter(Boolean)
+          .join(". ")
+          .replace(/\.\./g, "."),
+        benefit: fillerLed ? z.benefit || ZONES[z.key].benefit : "",
+        leaveAlone: z.leaveAlone,
+        obscured: z.obscured,
+      };
+    }),
     leaveAlone: leaveAloneLines(result.zones),
     causeNotes: result.causeNotes.length ? result.causeNotes : causeNotes(result.zones),
     firmnessLine: result.firmnessDominant ? FIRMNESS_LINE : null,

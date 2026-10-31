@@ -27,6 +27,7 @@ export function ScanScreen() {
   const failScan = useWizard((s) => s.failScan);
   const fillerHistory = useWizard((s) => s.fillerHistory);
   const priority = useWizard((s) => s.priority);
+  const sex = useWizard((s) => s.sex);
   const setLandmarksStore = useWizard((s) => s.setLandmarks);
   const completeScan = useWizard((s) => s.completeScan);
   const goToStep = useWizard((s) => s.goToStep);
@@ -67,13 +68,13 @@ export function ScanScreen() {
     startedRef.current = true;
     // No fallback report: HSA SkinScan is required. A failure goes to the
     // "We couldn't complete your scan" step (answers, consents and lead kept).
-    requestAnalysis({ imageBase64, imageMediaType, imageConsent, fillerHistory, priority }).then(
+    requestAnalysis({ imageBase64, imageMediaType, imageConsent, fillerHistory, priority, sex }).then(
       (res) => {
         if (res.ok) setResult(res.result);
         else failScan(res.error);
       },
     );
-  }, [imageBase64, imageMediaType, imageConsent, fillerHistory, priority, setResult, failScan, result]);
+  }, [imageBase64, imageMediaType, imageConsent, fillerHistory, priority, sex, setResult, failScan, result]);
 
   // Cycle status lines and mark the minimum animation time as elapsed.
   useEffect(() => {

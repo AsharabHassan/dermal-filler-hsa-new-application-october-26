@@ -6,13 +6,14 @@ import { assessment } from "./fixtures";
 
 const raw: RawAssessment = {
   zones: [
-    { zone: "cheeks", change: 66.4, appearsFull: false, note: "Some flattening high on the cheek" },
-    { zone: "nasolabial", change: 44, appearsFull: false, note: "Soft lines beside the mouth" },
-    { zone: "lips", change: 12, appearsFull: false, note: "Balanced with the rest of your face" },
-    { zone: "forehead", change: 90, appearsFull: false, note: "not a zone" },
-    { zone: "chin", change: 300, appearsFull: true, note: "Already full" },
+    { zone: "cheeks", change: 66.4, appearsFull: false, cause: "volume", see: "Some flattening high on the cheek", why: "Why for cheeks", help: "Help for cheeks", benefit: "Benefit for cheeks" },
+    { zone: "nasolabial", change: 44, appearsFull: false, cause: "volume", see: "Soft lines beside the mouth", why: "Why for nasolabial", help: "Help for nasolabial", benefit: "Benefit for nasolabial" },
+    { zone: "lips", change: 12, appearsFull: false, cause: "volume", see: "Balanced with the rest of your face", why: "Why for lips", help: "Help for lips", benefit: "Benefit for lips" },
+    { zone: "forehead", change: 90, appearsFull: false, cause: "volume", see: "not a zone", why: "Why for forehead", help: "Help for forehead", benefit: "Benefit for forehead" },
+    { zone: "chin", change: 300, appearsFull: true, cause: "volume", see: "Already full", why: "Why for chin", help: "Help for chin", benefit: "Benefit for chin" },
   ],
   zonesObscured: ["temples", "nonsense"],
+  summary: ["Your cheeks have flattened a little at the front.", "  ", "Your lips are in proportion."],
   skinLaxity: 35,
   jowlGrade: "mild",
   makeupDetected: false,
@@ -63,22 +64,27 @@ describe("buildResult", () => {
     const bad = assessment({}, {
       narrative: { headline: "A perfect, flawless you", narrative: "Fine.", encouragement: "Ask about Botox too." },
     });
-    bad.zones.lips.note = "Lips could look more attractive";
+    bad.zones.lips.see = "Lips could look more attractive";
+    bad.zones.cheeks.benefit = "A perfect, permanent lift";
+    bad.summary = ["Your face will transform", "Your cheeks have flattened a little."];
     const r = buildResult(bad, { fillerHistory: null, priority: null, skinScanUsed: true });
     expect(r.narrative.headline).toBe(SAFE_NARRATIVE.headline);
     expect(r.narrative.encouragement).toBe(SAFE_NARRATIVE.encouragement);
     expect(r.narrative.narrative).toBe("Fine.");
     expect(r.narrativeSource).toBe("fallback");
-    expect(r.zones.find((z) => z.key === "lips")!.note).toBe("");
+    expect(r.zones.find((z) => z.key === "lips")!.see).toBe("");
+    expect(r.zones.find((z) => z.key === "cheeks")!.benefit).toBe("");
+    expect(r.summary).toEqual(["Your cheeks have flattened a little."]);
     expect(enforceCopyRules({ headline: "Calm", narrative: "Calm", encouragement: "Calm" }).clean).toBe(true);
   });
 });
 
 describe("answersNote", () => {
   it("passes both pre-scan answers to Claude", () => {
-    expect(answersNote("yes_unhappy", "fix_previous")).toBe(
-      "The person's answers — Had filler before? Yes, and unhappy with it. What matters most? Fix previous work.",
+    expect(answersNote("yes_unhappy", "fix_previous", "man")).toBe(
+      "The person's answers — Which best describes you? Man. Had filler before? Yes, and unhappy with it. What matters most? Fix previous work.",
     );
+    expect(answersNote(null, null, "prefer_not")).toMatch(/Prefer not to say/);
     expect(answersNote(null, null)).toMatch(/not answered/);
   });
 });

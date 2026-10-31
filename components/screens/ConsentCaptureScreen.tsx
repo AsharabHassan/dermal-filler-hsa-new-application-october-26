@@ -9,10 +9,10 @@ import { CameraCapture, inPageCameraAvailable } from "@/components/scan/CameraCa
 import { PhotoGuide } from "@/components/scan/PhotoGuide";
 import { useWizard, type MediaType } from "@/store/wizard-store";
 import { fileToDownscaledImage } from "@/lib/image";
-import { FILLER_HISTORY_OPTIONS, PRIORITY_OPTIONS } from "@/lib/questions";
+import { FILLER_HISTORY_OPTIONS, PRIORITY_OPTIONS, SEX_OPTIONS } from "@/lib/questions";
 import { cn } from "@/lib/utils";
 
-type Missing = "history" | "priority" | "age" | "contact";
+type Missing = "sex" | "history" | "priority" | "age" | "contact";
 
 export function ConsentCaptureScreen() {
   const setImageConsent = useWizard((s) => s.setImageConsent);
@@ -24,6 +24,8 @@ export function ConsentCaptureScreen() {
   const setFillerHistory = useWizard((s) => s.setFillerHistory);
   const priority = useWizard((s) => s.priority);
   const setPriority = useWizard((s) => s.setPriority);
+  const sex = useWizard((s) => s.sex);
+  const setSex = useWizard((s) => s.setSex);
   const setImage = useWizard((s) => s.setImage);
   const beginScan = useWizard((s) => s.beginScan);
 
@@ -37,7 +39,9 @@ export function ConsentCaptureScreen() {
 
   /** Questions, 18+ and the consultation request all come before the scan. */
   function requireReady(): boolean {
-    const first: Missing | null = !fillerHistory
+    const first: Missing | null = !sex
+      ? "sex"
+      : !fillerHistory
       ? "history"
       : !priority
         ? "priority"
@@ -48,7 +52,7 @@ export function ConsentCaptureScreen() {
             : null;
     setMissing(first);
     if (!first) return true;
-    const target = { history: "q-history", priority: "q-priority", age: "q-age", contact: "consultation-request" }[first];
+    const target = { sex: "q-sex", history: "q-history", priority: "q-priority", age: "q-age", contact: "consultation-request" }[first];
     document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "center" });
     return false;
   }
@@ -85,7 +89,7 @@ export function ConsentCaptureScreen() {
   return (
     <div className="mx-auto w-full max-w-xl px-6 py-10">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-peach-deep">
-        Step 1 · Two quick questions, then your photo
+        Step 1 · Three quick questions, then your photo
       </p>
       <h2 className="mt-3 font-serif text-[32px] leading-tight text-heading sm:text-[38px]">
         A little about you first
@@ -111,6 +115,17 @@ export function ConsentCaptureScreen() {
         </div>
       ) : (
         <div className="mt-8 space-y-5">
+          <ChoiceGroup
+            id="q-sex"
+            title="Which best describes you?"
+            options={SEX_OPTIONS}
+            value={sex}
+            onChange={(v) => {
+              setSex(v);
+              if (missing === "sex") setMissing(null);
+            }}
+            invalid={missing === "sex"}
+          />
           <ChoiceGroup
             id="q-history"
             title="Have you had filler before?"

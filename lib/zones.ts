@@ -3,6 +3,7 @@ import type {
   MappedZone,
   PhotoAssessment,
   ZoneKey,
+  ZoneCause,
   ZoneRead,
   ZoneStatus,
 } from "./types";
@@ -61,6 +62,8 @@ export interface ZoneMeta {
   cause: string;
   /** How a doctor might support it, in cosmetic terms. */
   support: string;
+  /** Fallback "What filler could do here" line (subtle, temporary, no promises). */
+  benefit: string;
 }
 
 export const ZONES: Record<ZoneKey, ZoneMeta> = {
@@ -76,6 +79,8 @@ export const ZONES: Record<ZoneKey, ZoneMeta> = {
       "The temples lose a little fat and bone support over time, which can make the brow and eye area look more tired.",
     support:
       "A small amount of filler can restore the curve at the temple and soften the frame around the eyes.",
+    benefit:
+      "A little support at the temple can soften the hollow beside your brow, so the frame around your eyes looks more rested.",
   },
   teartrough: {
     key: "teartrough",
@@ -89,6 +94,8 @@ export const ZONES: Record<ZoneKey, ZoneMeta> = {
       "Under-eye hollows often deepen when the cheek below loses support, so the area catches shadow.",
     support:
       "A doctor places a very small amount with a gentle cannula technique to soften the shadow.",
+    benefit:
+      "A very small amount placed with a cannula can smooth the step between lid and cheek, so you look more rested.",
   },
   cheeks: {
     key: "cheeks",
@@ -102,6 +109,8 @@ export const ZONES: Record<ZoneKey, ZoneMeta> = {
       "The mid-face is where volume loss often starts. As the cheek flattens, the areas below it can look heavier.",
     support:
       "Restoring cheek support is often the first step. It can lift the look of the lower face too, so less is needed elsewhere.",
+    benefit:
+      "Restoring a little support at the front of the cheek can lift where light falls and soften the shadow beside your mouth.",
   },
   nasolabial: {
     key: "nasolabial",
@@ -115,6 +124,8 @@ export const ZONES: Record<ZoneKey, ZoneMeta> = {
       "These lines often come from lost cheek support above rather than from the line itself.",
     support:
       "Treating the cheek first can soften them more naturally. A little filler in the line can follow if it is still needed.",
+    benefit:
+      "Once the cheek above is supported, a little filler can soften what remains of the line beside your mouth.",
   },
   lips: {
     key: "lips",
@@ -127,6 +138,8 @@ export const ZONES: Record<ZoneKey, ZoneMeta> = {
     cause: "Lips gradually lose volume and definition over the years.",
     support:
       "A conservative amount can restore hydration, shape and balance, while keeping them looking like your own.",
+    benefit:
+      "A conservative amount can restore some hydration and shape at the border while keeping your lips looking like your own.",
   },
   marionette: {
     key: "marionette",
@@ -140,6 +153,8 @@ export const ZONES: Record<ZoneKey, ZoneMeta> = {
       "Shadows at the corners of the mouth often come with softening along the jaw and chin.",
     support:
       "Supporting the chin and jaw first can soften these lines. A small amount here can follow if needed.",
+    benefit:
+      "Supporting the chin and jaw, then a little here if needed, can soften the downturn at the corners of your mouth.",
   },
   chin: {
     key: "chin",
@@ -153,6 +168,8 @@ export const ZONES: Record<ZoneKey, ZoneMeta> = {
       "The chin can lose some projection over time, which affects the balance of the lower face and the jawline.",
     support:
       "Filler can add subtle projection and balance. This is often planned together with the jawline.",
+    benefit:
+      "Subtle projection at the chin can bring the lower face back into balance and sharpen the line into the jaw.",
   },
   jawline: {
     key: "jawline",
@@ -166,8 +183,16 @@ export const ZONES: Record<ZoneKey, ZoneMeta> = {
       "Jaw definition softens with volume loss, but also with skin firmness. The two need different treatments.",
     support:
       "Where volume is the cause, filler along the jaw can restore a clearer line. Where firmness is the cause, a skin-tightening treatment may suit better.",
+    benefit:
+      "Filler along the jaw edge can restore a cleaner line from chin to ear, adding definition rather than width.",
   },
 };
+
+const ZONE_CAUSES: ZoneCause[] = ["none", "volume", "firmness", "mixed"];
+
+function text(v: unknown): string {
+  return typeof v === "string" ? v.trim() : "";
+}
 
 function clamp(n: unknown): number {
   const v = Number(n);
@@ -207,7 +232,13 @@ export function mapZones(
       appearsFull,
       obscured: isHidden,
       leaveAlone: !isHidden && (appearsFull || status === "well_supported"),
-      note: typeof read?.note === "string" ? read.note.trim() : "",
+      // A well-supported zone has no "cause" to treat, whatever was returned.
+      cause: status === "well_supported" ? "none" : ZONE_CAUSES.includes(read?.cause as ZoneCause) ? (read!.cause as ZoneCause) : "volume",
+      see: text(read?.see),
+      why: text(read?.why),
+      help: text(read?.help),
+      // Benefit lines only belong to zones with change worth treating.
+      benefit: status === "well_supported" || appearsFull ? "" : text(read?.benefit),
     };
   });
 }

@@ -23,9 +23,22 @@ const P = {
 export interface ReportZone {
   label: string;
   status: string;
-  note: string;
+  /** What we see. */
+  see: string;
+  /** Why it happens (focus zones). */
+  why: string;
+  /** What could help — the rule-based heading plus detail. */
+  help: string;
+  /** What filler could do here (focus zones only). */
+  benefit: string;
   leaveAlone: boolean;
   obscured: boolean;
+}
+
+export interface ReportMeasurement {
+  label: string;
+  value: string;
+  detail?: string;
 }
 
 export interface ReportPlanItem {
@@ -48,6 +61,9 @@ export interface ReportInput {
   narrative: string;
   finding: string;
   encouragement: string;
+  /** "What's happening to your face" bullets. */
+  summary: string[];
+  measurements: ReportMeasurement[];
   faceImageDataUrl?: string | null;
   faceImageAspect?: number;
   zones: ReportZone[];
@@ -184,27 +200,68 @@ export function buildReportPdf(input: ReportInput): Blob {
   y += fl.length * 4.6 + 4;
   para(input.narrative, 9.5);
 
-  // ── Volume & Structure Map ───────────────────────────────────────────
+  // ── What's happening to your face ────────────────────────────────────
+  if (input.summary.length > 0) {
+    section("What's happening to your face");
+    for (const line of input.summary) para(`•  ${line}`, 10, P.heading, CW, 2.5);
+  }
+
+  // ── Volume & Structure Map, zone by zone ─────────────────────────────
   section("Your Volume & Structure Map");
-  for (const z of input.zones) {
-    ensure(14);
-    doc.setFillColor(...P.panel);
-    doc.setDrawColor(...P.line);
-    doc.roundedRect(M, y - 4, CW, 12, 2, 2, "FD");
+  const labelled = (label: string, text: string) => {
+    if (!text) return;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9.5);
+    doc.setFontSize(8);
+    doc.setTextColor(...P.accentDeep);
+    ensure(8);
+    doc.text(label, M + 3, y);
+    y += 3.6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...P.body);
+    const lines = doc.splitTextToSize(text, CW - 6) as string[];
+    ensure(lines.length * 3.6 + 1);
+    doc.text(lines, M + 3, y);
+    y += lines.length * 3.6 + 1.6;
+  };
+  for (const z of input.zones) {
+    ensure(18);
+    doc.setDrawColor(...P.line);
+    doc.setLineWidth(0.2);
+    doc.line(M, y - 4, PW - M, y - 4);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
     doc.setTextColor(...P.heading);
     doc.text(z.label, M + 3, y + 0.5);
     doc.setFontSize(7.5);
     const statusText = z.obscured ? "CHECKED AT CONSULTATION" : z.status.toUpperCase();
     doc.setTextColor(...(z.leaveAlone ? P.sage : P.accentDeep));
     doc.text(statusText + (z.leaveAlone ? " · LEAVE ALONE" : ""), PW - M - 3, y + 0.5, { align: "right" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...P.body);
-    const note = (doc.splitTextToSize(z.note, CW - 6) as string[])[0] ?? "";
-    doc.text(note, M + 3, y + 5);
-    y += 14;
+    y += 6;
+    labelled("What we see", z.see);
+    if (!z.leaveAlone && !z.obscured) {
+      labelled("Why it happens", z.why);
+      labelled("What could help", z.help);
+      labelled("What filler could do here", z.benefit);
+    }
+    y += 3;
+  }
+
+  // ── Scan measurements ────────────────────────────────────────────────
+  if (input.measurements.length > 0) {
+    section("Your scan measurements");
+    para("Measured from your photo by HSA SkinScan, the clinic's own analysis model. Readings of the photo, not scores of you.", 8, P.faint);
+    for (const m of input.measurements) {
+      ensure(6);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...P.body);
+      doc.text(m.label, M + 3, y);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...P.heading);
+      doc.text(`${m.value}${m.detail ? `  (${m.detail})` : ""}`, PW - M - 3, y, { align: "right" });
+      y += 5.2;
+    }
   }
 
   if (input.firmnessLine) {

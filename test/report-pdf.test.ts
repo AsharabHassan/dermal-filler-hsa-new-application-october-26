@@ -15,10 +15,15 @@ const SAMPLE: ReportInput = {
   finding: "Your scan found the most change in your cheeks and temples.",
   encouragement: "A GMC-registered doctor confirms what suits you at your free online consultation.",
   faceImageDataUrl: null,
+  summary: ["Your cheeks have lost a little height.", "Your lips are in proportion."],
+  measurements: [{ label: "Upper to lower lip ratio", value: "1 : 1.5", detail: "balanced range approx. 1 : 1.6" }],
   zones: Array.from({ length: 8 }, (_, i) => ({
     label: `Zone ${i + 1}`,
     status: i < 2 ? "Some change" : "Well supported",
-    note: "A short note",
+    see: "A short note about what we see",
+    why: "Why it happens",
+    help: "Filler, started small",
+    benefit: i < 2 ? "A little support can soften this" : "",
     leaveAlone: i >= 2,
     obscured: i === 7,
   })),
@@ -55,7 +60,12 @@ describe("buildReportPdf", () => {
     expect(text).toContain("Volume & Structure Map");
     expect(text).toContain("What we'd leave alone");
     expect(text).toContain("conservative plan preview");
-    expect(text).not.toMatch(/score/i);
+    expect(text).toContain("What's happening to your face");
+    expect(text).toContain("Your scan measurements");
+    expect(text).toContain("What filler could do here");
+    expect(text).toContain("Why it happens");
+    expect(text).not.toContain("≈");
+    expect(text).not.toMatch(/(beauty|age|attractiveness) score|\/100/i);
   });
 
   it("renders the honest firmness note and a plan-less report", async () => {

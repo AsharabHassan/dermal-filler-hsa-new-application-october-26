@@ -20,7 +20,7 @@ export const RESULT_SCHEMA = {
     zones: {
       type: "array",
       description:
-        "Exactly eight items, one per zone. change = 0–100 visible loss of volume/structure (0–25 well supported, 30–59 some change, 60+ noticeable). appearsFull = already full / previous filler. note = one short cosmetic observation to the person.",
+        "Exactly eight items, one per zone. change = 0–100 visible loss of volume/structure (below 30 well supported, 30–59 some change, 60+ noticeable). appearsFull = already full / previous filler. see / why / help = What we see (1–2 sentences), Why it happens (1 sentence), What could help (1 sentence), all specific to this photo and consistent with the score. cause = none (well supported) / volume / firmness / mixed. benefit = for zones scored 30+ with a volume or mixed cause, one benefit-led sentence on what filler could do HERE (subtle, gradual, temporary, no promises); empty string otherwise.",
       items: {
         type: "object",
         additionalProperties: false,
@@ -28,9 +28,13 @@ export const RESULT_SCHEMA = {
           zone: { type: "string", enum: ZONE_ENUM },
           change: { type: "number" },
           appearsFull: { type: "boolean" },
-          note: { type: "string" },
+          cause: { type: "string", enum: ["none", "volume", "firmness", "mixed"] },
+          see: { type: "string" },
+          why: { type: "string" },
+          help: { type: "string" },
+          benefit: { type: "string" },
         },
-        required: ["zone", "change", "appearsFull", "note"],
+        required: ["zone", "change", "appearsFull", "cause", "see", "why", "help", "benefit"],
       },
     },
     zonesObscured: {
@@ -52,6 +56,12 @@ export const RESULT_SCHEMA = {
       description: "False only when the face genuinely cannot be assessed; the person will be asked to retake.",
     },
     previousWorkVisible: { type: "boolean" },
+    summary: {
+      type: "array",
+      description:
+        "What's happening to your face: 3–5 short plain-English sentences telling the structural story of this face, linking cause and effect, including at least one well-supported zone. No numbers, no judgement.",
+      items: { type: "string" },
+    },
     headline: { type: "string", description: "6–10 calm, warm words." },
     narrative: { type: "string", description: "2–3 short observational sentences, UK English." },
     encouragement: {
@@ -67,6 +77,7 @@ export const RESULT_SCHEMA = {
     "makeupDetected",
     "framingAdequate",
     "previousWorkVisible",
+    "summary",
     "headline",
     "narrative",
     "encouragement",

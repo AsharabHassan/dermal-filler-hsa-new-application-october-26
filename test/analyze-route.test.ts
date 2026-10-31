@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SkinScanError } from "@/lib/skinscan";
 import { assessment } from "./fixtures";
+import { SIGNALS } from "./signals-fixture";
 
 const mocks = vi.hoisted(() => ({ scan: vi.fn(), assess: vi.fn() }));
 vi.mock("@/lib/skinscan", async (orig) => ({
@@ -19,6 +20,7 @@ const body = { imageBase64: "b64", imageMediaType: "image/jpeg", imageConsent: t
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "info").mockImplementation(() => {});
 });
 
 describe("POST /api/analyze", () => {
@@ -38,6 +40,25 @@ describe("POST /api/analyze", () => {
     expect(mocks.assess).toHaveBeenCalledWith(
       expect.objectContaining({ fillerHistory: "yes_unhappy", priority: "fix_previous", signals: { ok: true } }),
     );
+  });
+
+  it("passes the sex answer to Claude and returns the summary, zone detail and measurements", async () => {
+    mocks.scan.mockResolvedValue({ ...SIGNALS });
+    mocks.assess.mockResolvedValue(assessment({ jawline: 55 }));
+    const json = await (await POST(req({ ...body, sex: "man" }))).json();
+    expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({ sex: "man" }));
+    expect(json.result.sex).toBe("man");
+    expect(json.result.summary.length).toBeGreaterThanOrEqual(3);
+    const jaw = json.result.zones.find((z: { key: string }) => z.key === "jawline");
+    expect(jaw).toMatchObject({ see: expect.any(String), why: expect.any(String), help: expect.any(String), benefit: expect.any(String) });
+    expect(json.result.measurements.find((m: { key: string }) => m.key === "lip_ratio").value).toBe("1 : 1.5");
+  });
+
+  it("ignores an unknown sex value", async () => {
+    mocks.scan.mockResolvedValue({ ok: true });
+    mocks.assess.mockResolvedValue(assessment({}));
+    await POST(req({ ...body, sex: "robot" }));
+    expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({ sex: null }));
   });
 
   it("marks zones SkinScan found outside the frame as checked at consultation", async () => {

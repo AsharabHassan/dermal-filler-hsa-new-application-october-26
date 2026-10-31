@@ -2,9 +2,18 @@
 
 Dermal-fillers analyzer for **Harley Street Aesthetics** (London: 1-5 Portpool Lane, EC1N 7UU · Glasgow: Ingram House). Big idea: **"Still you."** Restore what time took, nothing it didn't.
 
-A visitor answers two questions ("Had filler before?", "What matters most?"), confirms they are 18+, ticks the required "I'm requesting a free consultation" box, and takes a selfie. **HSA SkinScan** (the clinic's own model server) plus Claude Sonnet map eight zones — temples, tear trough, cheeks, nasolabial, lips, marionette, chin, jawline — as *Well supported / Some change / Noticeable change*. The report (step 2 of 4) shows explicit **leave-alone** zones, explains causes, gives an honest non-filler line when skin firmness dominates (Nu Sculpt / skin quality), and previews a conservative plan with "from" prices and the current 4 ml offer. No beauty, age or attractiveness score anywhere.
+A visitor answers three questions ("Which best describes you?" Woman / Man / Prefer not to say, "Had filler before?", "What matters most?"), confirms they are 18+, ticks the required "I'm requesting a free consultation" box, and takes a selfie. **HSA SkinScan** (the clinic's own model server) plus Claude Sonnet map eight zones — temples, tear trough, cheeks, nasolabial, lips, marionette, chin, jawline — as *Well supported / Some change / Noticeable change*. The report (step 2 of 4) shows explicit **leave-alone** zones, explains causes, gives an honest non-filler line when skin firmness dominates (Nu Sculpt / skin quality), and previews a conservative plan with "from" prices and the current 4 ml offer. No beauty, age or attractiveness score anywhere.
 
 Cloned from the HSA Under-Eye app (journey, consent tickbox, lead gate, GHL calendar, StickyBookingBar, webhook, London/Glasgow routes); report layout follows the Pigmentation app.
+
+### Report order (owner-specified, Nov 2026)
+
+NextStepCard (finding + offer) → **What's happening to your face** (3–5 structural bullets for this face) beside the photo with the 8-zone pins → **focus zone cards** (What we see / Why it happens / What could help, "What filler could do here", real HSA before/after for lips and tear trough) → **See the possible difference** (personal AI illustration) → zones holding up well → **Your scan measurements** (HSA SkinScan, plain language) → plan + 4 ml £699 offer → calendar.
+
+- "What could help" headings come from `zoneHelp()` in `lib/plan.ts` (rules, not Claude), so a card can never contradict the map or the plan. Claude's tailored sentence sits underneath.
+- **Sex-aware:** for men, jaw / chin / temples / tear troughs lead, and lips or cheeks are only planned when the change is clearly noticeable. Sex is never inferred from the photo. GHL tag `fillers-sex-{woman|man|prefer_not}`.
+- **Measurements** (`lib/measurements.ts`) are readings of the photo, never scores of the person. Uncalibrated hints read as low / moderate / higher.
+- **Personal preview** (`app/api/preview`, `lib/ai-preview.ts`, `lib/prompts/preview-edit.ts`): an OpenAI image edit limited to up to 3 start-stage focus zones, sex-aware, with the pigmentation app's luma-drift guard. It is hidden when `OPENAI_API_KEY` is unset or the edit drifts, and it never blocks the report.
 
 ## Run / test
 
@@ -33,6 +42,8 @@ cd "D:/June Project/hsm endolift/pigmentation-model"
 | `SKINSCAN_API_KEY` | sent as `x-skinscan-key` |
 | `GHL_WEBHOOK_URL` | GHL inbound webhook for leads — **placeholder, new workflow not built yet** |
 | `GHL_API_TOKEN`, `GHL_LOCATION_ID`, `GHL_REPORT_FIELD_KEY` | PDF upload / contact tagging (no-op when blank) |
+| `OPENAI_API_KEY` | personal "See the possible difference" preview — optional; hidden when unset |
+| `OPENAI_IMAGE_MODEL`, `OPENAI_IMAGE_QUALITY` | defaults `gpt-image-2.5-sunburst` / `high` (same as the pigmentation app) |
 | `NEXT_PUBLIC_META_PIXEL_ID`, `META_DATASET_ID` | Meta pixel / CAPI — **leave blank** until the new dataset exists |
 | `NEXT_PUBLIC_SITE_URL` | defaults to `https://fillers.harleystreetaesthetic.co.uk` (TODO(HSA): confirm domain) |
 | `NEXT_PUBLIC_BOOKING_CALENDAR_URL`, `NEXT_PUBLIC_GLASGOW_BOOKING_CALENDAR_URL` | GHL calendar (defaults to the shared HSA consultation calendar) |
@@ -65,12 +76,11 @@ The local `.env.local` was copied from the under-eye app with every live GHL / M
 
 GHL tags: `dermal-fillers-analyzer`, `hsa-dermal-fillers-app`, `hsa-clinic-{london|glasgow}`, `hsa-consultation-call-requested`, `hsa-call-{morning|afternoon|evening}`, `hsa-meta-consent-{accepted|declined}`, plus `fillers-history-*`, `fillers-priority-*`, `fillers-focus-{zone}`, `fillers-firmness-first`, `fillers-review-previous-work`, `fillers-offer-4ml`. Payload includes `zoneMap`, `planSummary`, `fillerHistoryLabel`, `priorityLabel`, `ageConfirmed`.
 
-## Needs deploying (nothing has been deployed)
+## Deployment status
 
-1. **SkinScan `/fillers`** — added to `pigmentation-model/serve.py` locally (backup: `serve.py.bak-pre-fillers-20261031`). Redeploy the droplet container. Note `deploy/deploy.sh` does not pack `out/endolift.joblib`; the Dockerfile copies it if present — check it is on the server.
-2. **Vercel project** for this app + env vars above + custom domain.
-3. **GHL workflow** for the new webhook (tags above, AI voice call-back, email with report), then set `GHL_WEBHOOK_URL`.
-4. Meta dataset / pixel (then set the two Meta vars).
+- SkinScan `/fillers`: deployed on the droplet.
+- Vercel project `hsa-dermal-fillers-app`: live, deployed with `vercel --prod` from this folder.
+- Still to do: the GHL workflow for the new webhook (then set `GHL_WEBHOOK_URL`), the Meta dataset / pixel, and the custom domain.
 
 ## TODO(HSA)
 

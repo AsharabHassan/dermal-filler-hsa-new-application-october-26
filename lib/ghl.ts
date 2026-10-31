@@ -5,6 +5,7 @@ import type {
   FillerHistory,
   Lead,
   Priority,
+  Sex,
   ServerMetaConversion,
   ClinicLocationKey,
 } from "./types";
@@ -31,6 +32,12 @@ export const PRIORITY_LABEL: Record<Priority, string> = {
   not_sure: "Not sure",
 };
 
+export const SEX_LABEL: Record<Sex, string> = {
+  woman: "Woman",
+  man: "Man",
+  prefer_not: "Prefer not to say",
+};
+
 export interface GhlPayload {
   firstName: string;
   lastName: string;
@@ -52,7 +59,12 @@ export interface GhlPayload {
   /** "What matters most?" */
   priority: Priority;
   priorityLabel: string;
+  /** "Which best describes you?" (self-reported, never inferred). */
+  sex: Sex;
+  sexLabel: string;
   ageConfirmed: boolean;
+  /** "What's happening to your face" bullets, for the call opener. */
+  faceSummary: string;
   /** Zones with change, most-affected first ("cheeks, nasolabial"). */
   focusZones: string;
   /** Zones the report says to leave alone. */
@@ -106,6 +118,7 @@ export interface BuildGhlPayloadOptions {
   ageConfirmed: boolean;
   fillerHistory: FillerHistory;
   priority: Priority;
+  sex: Sex;
   consultationContact?: { at: string; statement: string; version: string };
   preferredCallTime?: string;
 }
@@ -220,6 +233,7 @@ export function buildGhlPayload(
       ...baseTags(clinic.key),
       `fillers-history-${options.fillerHistory}`,
       `fillers-priority-${options.priority}`,
+      `fillers-sex-${options.sex}`,
       ...result.focusZones.slice(0, 3).map((z) => `fillers-focus-${z}`),
       ...(result.firmnessDominant ? ["fillers-firmness-first"] : []),
       ...(reviewPrevious ? ["fillers-review-previous-work"] : []),
@@ -239,7 +253,10 @@ export function buildGhlPayload(
     fillerHistoryLabel: FILLER_HISTORY_LABEL[options.fillerHistory],
     priority: options.priority,
     priorityLabel: PRIORITY_LABEL[options.priority],
+    sex: options.sex,
+    sexLabel: SEX_LABEL[options.sex],
     ageConfirmed: options.ageConfirmed,
+    faceSummary: result.summary.join(" "),
     focusZones: result.focusZones.map((z) => ZONES[z].label).join(", "),
     leaveAloneZones: result.leaveAloneZones.map((z) => ZONES[z].label).join(", "),
     zoneMap: result.zones
