@@ -8,6 +8,8 @@
 // preview stays hidden. A preview must never misrepresent the result.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { NormalizedPoint } from "@/components/scan/useFaceLandmarker";
+import { previewMaskEllipses } from "@/lib/preview-mask";
 import type { Sex, ZoneKey } from "@/lib/types";
 
 const GRID = 48;
@@ -81,31 +83,53 @@ export interface AfterImage {
 
 let cache: { key: string; promise: Promise<AfterImage | null> } | null = null;
 
+/**
+ * PNG mask (base64, same size as the photo) whose transparent pixels are the
+ * focus zones: the only area the image model may edit.
+ */
+function zoneMaskPng(zones: ZoneKey[], lm: NormalizedPoint[], w: number, h: number): string | null {
+  const ellipses = previewMaskEllipses(zones, lm);
+  if (ellipses.length === 0) return null;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = "destination-out";
+  for (const e of ellipses) {
+    ctx.beginPath();
+    ctx.ellipse(e.cx * w, e.cy * h, e.rx * w, e.ry * h, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return c.toDataURL("image/png").split(",")[1] ?? null;
+}
+
 /** The validated "after" illustration on the original pixel grid, or null. */
 export function aiAfterImage(
   imageBase64: string,
   imageMediaType: string,
   zones: ZoneKey[],
   sex: Sex | null,
+  landmarks: NormalizedPoint[] | null = null,
 ): Promise<AfterImage | null> {
   const key = `${imageBase64.length}:${imageBase64.slice(-64)}:${zones.join(",")}:${sex ?? ""}`;
   if (cache?.key === key) return cache.promise;
   const promise = (async () => {
     try {
+      const orig = await loadImage(`data:${imageMediaType};base64,${imageBase64}`);
+      const w = orig.naturalWidth;
+      const h = orig.naturalHeight;
+      const maskBase64 = landmarks ? zoneMaskPng(zones, landmarks, w, h) : null;
       const res = await fetch("/api/preview", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ imageBase64, imageMediaType, imageConsent: true, zones, sex }),
+        body: JSON.stringify({ imageBase64, imageMediaType, imageConsent: true, zones, sex, maskBase64 }),
       });
       if (!res.ok) return null;
       const json = (await res.json()) as { imageBase64?: string; imageMediaType?: string };
       if (!json.imageBase64) return null;
-      const [orig, edit] = await Promise.all([
-        loadImage(`data:${imageMediaType};base64,${imageBase64}`),
-        loadImage(`data:${json.imageMediaType ?? "image/png"};base64,${json.imageBase64}`),
-      ]);
-      const w = orig.naturalWidth;
-      const h = orig.naturalHeight;
+      const edit = await loadImage(`data:${json.imageMediaType ?? "image/png"};base64,${json.imageBase64}`);
       const c = document.createElement("canvas");
       c.width = w;
       c.height = h;

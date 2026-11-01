@@ -30,6 +30,7 @@ export function PersonalPreview({ result }: { result: AnalyzeResult }) {
   const imageBase64 = useWizard((s) => s.imageBase64);
   const imageMediaType = useWizard((s) => s.imageMediaType);
   const sex = useWizard((s) => s.sex);
+  const landmarks = useWizard((s) => s.landmarks);
   const zones = useMemo(() => previewZones(result), [result]);
   const [state, setState] = useState<State>("checking");
   const [after, setAfter] = useState<{ src: string; ratio: string } | null>(null);
@@ -47,7 +48,7 @@ export function PersonalPreview({ result }: { result: AnalyzeResult }) {
       }
       if (cancelled) return;
       setState("loading");
-      const img = await aiAfterImage(imageBase64, imageMediaType, zones, sex);
+      const img = await aiAfterImage(imageBase64, imageMediaType, zones, sex, landmarks);
       if (cancelled) return;
       if (img) {
         setAfter({ src: img.dataUrl, ratio: `${img.width} / ${img.height}` });
@@ -59,7 +60,7 @@ export function PersonalPreview({ result }: { result: AnalyzeResult }) {
     return () => {
       cancelled = true;
     };
-  }, [imageBase64, imageMediaType, zones, sex]);
+  }, [imageBase64, imageMediaType, zones, sex, landmarks]);
 
   if (state === "hidden" || state === "checking" || !imageBase64) return null;
   const before = `data:${imageMediaType};base64,${imageBase64}`;
