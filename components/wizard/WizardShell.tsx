@@ -49,7 +49,7 @@ function WizardJourney() {
   const showFooter = step === "hero" || step === "result";
 
   return (
-    <div className={`${styles.experience} flex min-h-dvh flex-col overflow-x-hidden`} data-analysis-step={step}>
+    <div className={`${styles.experience} flex min-h-dvh flex-col overflow-x-clip`} data-analysis-step={step}>
       <Header hero={step === "hero"} step={step} />
 
       <main className="flex flex-1 items-center justify-center">

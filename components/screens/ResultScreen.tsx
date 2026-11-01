@@ -13,10 +13,13 @@ import { ScanMeasurements } from "@/components/result/ScanMeasurements";
 import { LeaveAlonePanel } from "@/components/result/LeaveAlonePanel";
 import { PlanPreview } from "@/components/result/PlanPreview";
 import { HAS_RESULTS_GALLERY, ResultsGallery } from "@/components/result/ResultsGallery";
-import { REVIEWS } from "@/lib/reviews";
-import { Testimonials } from "@/components/result/Testimonials";
+import { GoogleReviews } from "@/components/result/GoogleReviews";
+import { Doctors } from "@/components/result/Doctors";
+import { Finance } from "@/components/result/Finance";
+import { TrustBar } from "@/components/result/TrustBar";
+import { ReportNav, type ReportSection } from "@/components/result/ReportNav";
 import { BookingCTA, StickyBookingBar } from "@/components/result/BookingCTA";
-import { BookingCalendar } from "@/components/result/BookingCalendar";
+import { BOOKING_ANCHOR_ID, BookingCalendar } from "@/components/result/BookingCalendar";
 import { DisclaimerBanner } from "@/components/compliance/DisclaimerBanner";
 import { EASE } from "@/lib/motion";
 import { useClinicLocation } from "@/components/clinic/ClinicLocationContext";
@@ -75,9 +78,23 @@ export function ResultScreen() {
     }
   }
 
+  const sections: ReportSection[] = [
+    { id: "overview", label: "Overview" },
+    { id: "map", label: "Your map" },
+    { id: "zones", label: "Zones" },
+    { id: "plan", label: "Plan" },
+    { id: "finance", label: "0% finance" },
+    ...(HAS_RESULTS_GALLERY ? [{ id: "results", label: "Results" }] : []),
+    { id: "doctors", label: "Doctors" },
+    { id: "reviews", label: "Reviews" },
+    { id: BOOKING_ANCHOR_ID, label: "Book free consultation" },
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 pb-28 pt-10 sm:px-8 sm:pb-12">
-      <motion.header {...reveal(0)} className="mx-auto max-w-2xl text-center">
+    <div className="mx-auto w-full max-w-5xl px-5 pb-28 pt-6 sm:px-8 sm:pb-12 sm:pt-10">
+      <ReportNav sections={sections} />
+
+      <motion.header {...reveal(0)} id="overview" className="mx-auto mt-8 max-w-2xl scroll-mt-28 text-center">
         <p className="font-serif text-[17px] italic text-peach-deep">
           Your pre-consultation report{lead?.firstName ? ` for ${lead.firstName}` : ""}
         </p>
@@ -85,11 +102,15 @@ export function ResultScreen() {
         <p className="mx-auto mt-4 max-w-xl text-[15.5px] leading-relaxed text-body">{narrative.narrative}</p>
       </motion.header>
 
-      <motion.div {...reveal(0.1)} className="mx-auto mt-10 max-w-3xl">
+      <motion.div {...reveal(0.05)} className="mt-6">
+        <TrustBar />
+      </motion.div>
+
+      <motion.div {...reveal(0.1)} className="mx-auto mt-8 max-w-3xl">
         <NextStepCard />
       </motion.div>
 
-      <motion.div {...reveal(0.2)} className="mt-16 sm:mt-20">
+      <motion.div {...reveal(0.2)} id="map" className="mt-16 scroll-mt-28 sm:mt-20">
         <FaceStory result={result} />
       </motion.div>
 
@@ -104,7 +125,9 @@ export function ResultScreen() {
       )}
 
       <div className="mx-auto mt-16 max-w-3xl space-y-16 sm:mt-20 sm:space-y-20">
-        <FocusZones result={result} />
+        <div id="zones" className="scroll-mt-28">
+          <FocusZones result={result} />
+        </div>
 
         <PersonalPreview result={result} />
 
@@ -125,13 +148,29 @@ export function ResultScreen() {
 
         <ScanMeasurements measurements={result.measurements} />
 
-        <PlanPreview result={result} />
+        <div id="plan" className="scroll-mt-28">
+          <PlanPreview result={result} />
+        </div>
+
+        <div id="finance" className="scroll-mt-28">
+          <Finance result={result} />
+        </div>
 
         <BookingCalendar />
 
-        {HAS_RESULTS_GALLERY && <ResultsGallery />}
+        {HAS_RESULTS_GALLERY && (
+          <div id="results" className="scroll-mt-28">
+            <ResultsGallery />
+          </div>
+        )}
 
-        {REVIEWS.length > 0 && <Testimonials />}
+        <div id="doctors" className="scroll-mt-28">
+          <Doctors />
+        </div>
+
+        <div id="reviews" className="scroll-mt-28">
+          <GoogleReviews />
+        </div>
 
         <div>
           <p className="mb-4 text-center font-serif text-[20px] text-heading">{narrative.encouragement}</p>

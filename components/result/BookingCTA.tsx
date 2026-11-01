@@ -75,6 +75,7 @@ export function StickyBookingBar({ label }: { label: string }) {
       <Button size="lg" className="w-full px-4 text-sm" onClick={scrollToBooking}>
         <CalendarHeart size={18} /> {label}
       </Button>
+      <p className="mt-1.5 text-center text-[11px] text-body/70">Free · Online · 15 minutes · No obligation</p>
     </div>,
     document.body,
   );
