@@ -1,4 +1,4 @@
-import { buildPreviewPrompt } from "@/lib/prompts/preview-edit";
+import { buildPreviewPrompt, PROMPT_STYLES, type PromptStyle } from "@/lib/prompts/preview-edit";
 import { isZoneKey } from "@/lib/zones";
 import type { Sex } from "@/lib/types";
 
@@ -25,7 +25,12 @@ interface PreviewRequest {
   imageConsent?: boolean;
   zones?: unknown;
   sex?: unknown;
+  /** Tuning knobs (prompt style, image quality) used while calibrating the preview. */
+  style?: unknown;
+  quality?: unknown;
 }
+
+const QUALITIES = ["high", "xhigh", "max"] as const;
 
 export async function POST(request: Request): Promise<Response> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -47,6 +52,10 @@ export async function POST(request: Request): Promise<Response> {
   const zones = Array.isArray(body.zones) ? body.zones.filter(isZoneKey).slice(0, 3) : [];
   if (zones.length === 0) return Response.json({ error: "no focus zones" }, { status: 400 });
   const sex = SEX.includes(body.sex as Sex) ? (body.sex as Sex) : null;
+  const style = PROMPT_STYLES.includes(body.style as PromptStyle) ? (body.style as PromptStyle) : "plain";
+  const quality = QUALITIES.includes(body.quality as (typeof QUALITIES)[number])
+    ? (body.quality as string)
+    : process.env.OPENAI_IMAGE_QUALITY || "high";
 
   // No mask: gpt-image treats it as a hint only and paints smudges inside large
   // mask areas. The client confines the result to the focus zones instead.
@@ -57,9 +66,9 @@ export async function POST(request: Request): Promise<Response> {
     new Blob([Buffer.from(imageBase64, "base64")], { type: imageMediaType }),
     imageMediaType === "image/png" ? "selfie.png" : "selfie.jpg",
   );
-  form.append("prompt", buildPreviewPrompt(zones, sex));
+  form.append("prompt", buildPreviewPrompt(zones, sex, style));
   form.append("size", "auto");
-  form.append("quality", process.env.OPENAI_IMAGE_QUALITY || "high");
+  form.append("quality", quality);
   form.append("n", "1");
 
   const started = Date.now();
@@ -78,7 +87,7 @@ export async function POST(request: Request): Promise<Response> {
     const json = (await res.json()) as { data?: { b64_json?: string }[]; output_format?: string };
     const out = json.data?.[0]?.b64_json;
     if (!out) return Response.json({ error: "preview-empty" }, { status: 502 });
-    console.info("[preview]", { event: "preview_ready", ms: Date.now() - started, zones });
+    console.info("[preview]", { event: "preview_ready", ms: Date.now() - started, zones, style, quality });
     return Response.json({ imageBase64: out, imageMediaType: `image/${json.output_format ?? "png"}` });
   } catch (err) {
     console.error("[preview] request failed", err instanceof Error ? err.message : err);
