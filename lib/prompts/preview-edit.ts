@@ -29,7 +29,6 @@ export function buildPreviewPrompt(zones: ZoneKey[], sex: Sex | null): string {
   const guards = [
     "Keep the person's identity, face shape, skin texture, pores, freckles, hair, expression, pose, lighting, background, framing and image size exactly the same.",
     "Change nothing outside the areas named. No slimming, no smoothing or retouching of the skin, no makeup, no change to eye or nose shape.",
-    "Filler changes volume and contour only: keep every pigmentation patch, freckle, sun spot, pore, line, wrinkle and under-eye texture exactly as in the original, including inside the named areas, and keep the skin tone and colour identical.",
     unique.includes("lips") ? "" : "Do not change the lips at all.",
     sex === "man"
       ? "Keep every feature masculine: no added cheek roundness, no lip enlargement, no softening of the jaw."
