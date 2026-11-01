@@ -25,8 +25,6 @@ interface PreviewRequest {
   imageConsent?: boolean;
   zones?: unknown;
   sex?: unknown;
-  /** PNG, same size as the photo; transparent = editable (the focus zones). */
-  maskBase64?: unknown;
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -49,11 +47,9 @@ export async function POST(request: Request): Promise<Response> {
   const zones = Array.isArray(body.zones) ? body.zones.filter(isZoneKey).slice(0, 3) : [];
   if (zones.length === 0) return Response.json({ error: "no focus zones" }, { status: 400 });
   const sex = SEX.includes(body.sex as Sex) ? (body.sex as Sex) : null;
-  const maskBase64 =
-    typeof body.maskBase64 === "string" && body.maskBase64.length > 0 && body.maskBase64.length <= MAX_BASE64
-      ? body.maskBase64
-      : null;
 
+  // No mask: gpt-image treats it as a hint only and paints smudges inside large
+  // mask areas. The client confines the result to the focus zones instead.
   const form = new FormData();
   form.append("model", process.env.OPENAI_IMAGE_MODEL || "gpt-image-2.5-sunburst");
   form.append(
@@ -61,10 +57,7 @@ export async function POST(request: Request): Promise<Response> {
     new Blob([Buffer.from(imageBase64, "base64")], { type: imageMediaType }),
     imageMediaType === "image/png" ? "selfie.png" : "selfie.jpg",
   );
-  if (maskBase64) {
-    form.append("mask", new Blob([Buffer.from(maskBase64, "base64")], { type: "image/png" }), "mask.png");
-  }
-  form.append("prompt", buildPreviewPrompt(zones, sex, Boolean(maskBase64)));
+  form.append("prompt", buildPreviewPrompt(zones, sex));
   form.append("size", "auto");
   form.append("quality", process.env.OPENAI_IMAGE_QUALITY || "high");
   form.append("n", "1");
@@ -85,7 +78,7 @@ export async function POST(request: Request): Promise<Response> {
     const json = (await res.json()) as { data?: { b64_json?: string }[]; output_format?: string };
     const out = json.data?.[0]?.b64_json;
     if (!out) return Response.json({ error: "preview-empty" }, { status: 502 });
-    console.info("[preview]", { event: "preview_ready", ms: Date.now() - started, zones, masked: Boolean(maskBase64) });
+    console.info("[preview]", { event: "preview_ready", ms: Date.now() - started, zones });
     return Response.json({ imageBase64: out, imageMediaType: `image/${json.output_format ?? "png"}` });
   } catch (err) {
     console.error("[preview] request failed", err instanceof Error ? err.message : err);

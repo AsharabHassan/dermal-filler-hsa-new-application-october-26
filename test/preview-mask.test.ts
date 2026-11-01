@@ -27,13 +27,13 @@ describe("previewMaskEllipses", () => {
   });
 });
 
-describe("masked preview prompt", () => {
-  it("confines the edit to the mask and asks for a clearly visible filler change", () => {
-    const p = buildPreviewPrompt(["jawline", "cheeks"], "woman", true);
-    expect(p).toMatch(/transparent area of the mask/);
-    expect(p).toMatch(/clearly visible side by side/);
-    expect(p).toMatch(/volume and contour only/);
+describe("preview prompt strength", () => {
+  it("asks for an obvious, concrete filler change and protects the skin surface", () => {
+    const p = buildPreviewPrompt(["jawline", "cheeks"], "woman");
+    expect(p).toMatch(/2 ml of filler along each side of the jawline/);
+    expect(p).toMatch(/2 ml of filler to the front of each cheek/);
+    expect(p).toMatch(/immediately notice/);
     expect(p).toMatch(/pigmentation/);
-    expect(p).not.toMatch(/Change nothing outside the areas named/);
+    expect(p).toMatch(/Change nothing outside the areas named/);
   });
 });

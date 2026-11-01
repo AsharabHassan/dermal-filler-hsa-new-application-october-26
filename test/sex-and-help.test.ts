@@ -79,7 +79,7 @@ describe("personal preview prompt", () => {
   it("is natural but visible, limited to the focus zones and never touches lips unless asked", () => {
     const p = buildPreviewPrompt(["cheeks", "temples"], "woman");
     expect(p).toMatch(/never overdone/);
-    expect(p).toMatch(/front of the cheeks/);
+    expect(p).toMatch(/front of each cheek/);
     expect(p).toMatch(/Do not change the lips at all/);
     expect(p).toMatch(/No slimming/);
     expect(p).toMatch(/identity/);

@@ -2,53 +2,52 @@ import type { Sex, ZoneKey } from "../types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The image-edit instruction for the personal "See the possible difference"
-// preview. Clearly visible volume/contour change (what filler does), limited
-// to the client's focus zones and, when a mask is sent, to the mask area; the
-// skin surface itself is never retouched. Sex-aware (never feminising for
-// men). Pure; tested in test/sex-and-help.test.ts.
+// preview. The image model (gpt-image-2.5) keeps faces conservative, so the
+// instruction is deliberately explicit: a concrete filler volume per zone and
+// an obvious side-by-side difference. Skin surface is never retouched; the
+// client keeps the AI pixels only inside the focus zones anyway
+// (lib/ai-preview.ts). Sex-aware (never feminising for men). Pure; tested in
+// test/sex-and-help.test.ts and test/preview-mask.test.ts.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ZONE_EDIT: Record<ZoneKey, string> = {
   temples:
-    "fill the hollow temples beside the outer brows with clear volume so they sit flush with the brow bone and the hollow is gone",
+    "add 1 ml of filler to each temple so the hollows beside the outer brows are obviously filled, sitting flush with the brow bone, and the outer brow lifts slightly",
   teartrough:
-    "fill the tear-trough groove under each eye with clear volume so the dark hollow between the lower lid and cheek is smoothed away and the eyes look rested",
+    "add 1 ml of filler to each tear trough so the dark groove under the eyes is obviously filled and smooth, the lower lid blending straight into the cheek, and the eyes look clearly rested",
   cheeks:
-    "add clear, generous volume to the front of the cheeks: a fuller, higher apple of the cheek that catches the light, with the mid-face visibly plumper and lifted",
+    "add 2 ml of filler to the front of each cheek so the apple of the cheek is obviously fuller, rounder and lifted with a clear new highlight, and the whole mid-face looks visibly plumper",
   nasolabial:
-    "fill the nasolabial folds from the sides of the nose to the mouth corners with clear volume so the folds are much shallower",
-  lips:
-    "make the lips noticeably fuller with a crisp, defined lip border, keeping their natural shape and proportions",
+    "add 1 ml of filler to each nasolabial fold so the lines from the nose to the mouth corners are obviously shallower and softer",
+  lips: "add 1 ml of filler to the lips so they are obviously fuller with a crisp, defined border, keeping their natural shape and proportions",
   marionette:
-    "fill the marionette lines running down from the mouth corners with clear volume so the shadows there are much softer",
-  chin: "add clear chin projection: a rounder, more forward, better-defined chin that balances the lower face",
+    "add 1 ml of filler to each marionette line so the shadows running down from the mouth corners are obviously softened and the mouth corners lift slightly",
+  chin: "add 2 ml of filler to the chin so it projects obviously further forward, rounder and better defined, balancing the lower face",
   jawline:
-    "sharpen and define the jawline clearly from chin to ear: a crisper, straighter jaw edge with visibly less softness under the jaw",
+    "add 2 ml of filler along each side of the jawline so the jaw edge from chin to ear is obviously sharper, straighter and more defined, with clearly less softness under the jaw",
 };
 
 const MALE_EDIT: Partial<Record<ZoneKey, string>> = {
   cheeks:
-    "restore clear lost volume at the front of the cheeks without adding roundness, keeping the cheek flat and structured",
-  chin: "add clear, square chin projection for structure",
+    "add 2 ml of filler to the front of each cheek so the lost volume is obviously restored without adding roundness, keeping the cheek flat and structured",
+  chin: "add 2 ml of filler to the chin so it projects obviously further forward, square and structured",
   jawline:
-    "sharpen and define the jaw edge clearly from chin to ear, keeping it masculine, with visibly less softness under the jaw",
+    "add 2 ml of filler along each side of the jawline so the jaw edge from chin to ear is obviously sharper and more defined, keeping it masculine, with clearly less softness under the jaw",
 };
 
-export function buildPreviewPrompt(zones: ZoneKey[], sex: Sex | null, masked = false): string {
+export function buildPreviewPrompt(zones: ZoneKey[], sex: Sex | null): string {
   const unique = Array.from(new Set(zones)).slice(0, 3);
   const edits = unique.map((z) => (sex === "man" ? MALE_EDIT[z] : undefined) ?? ZONE_EDIT[z]);
   const guards = [
-    "This simulates a doctor-led dermal filler treatment, so the change is volume and contour only.",
-    "Keep the person's identity, face shape, skin texture, pores, freckles, pigmentation, lines, hair, expression, pose, lighting, background, framing and image size exactly the same.",
-    masked
-      ? "Edit only inside the transparent area of the mask; every pixel outside it must stay identical to the original photo."
-      : "Change nothing outside the areas named.",
+    "This shows the result of a doctor-led dermal filler treatment, so the only change is volume and contour in the named areas.",
+    "A viewer comparing this with the original side by side must immediately notice the fuller or sharper areas, so make the change obvious, like a strong but well-judged filler result: realistic, never overdone or cartoonish.",
+    "Keep the person's identity, face shape elsewhere, skin texture, pores, freckles, pigmentation, lines, hair, expression, pose, lighting, background, framing and image size exactly the same.",
+    "Change nothing outside the areas named.",
     "No slimming, no smoothing or retouching of the skin, no brightening, no makeup, no change to eye or nose shape.",
     unique.includes("lips") ? "" : "Do not change the lips at all.",
     sex === "man"
       ? "Keep every feature masculine: no added cheek roundness, no lip enlargement, no softening of the jaw."
       : "",
-    "The difference in the named areas must be clearly visible side by side with the original, like a confident, well-judged filler result, but still realistic and never overdone.",
   ].filter(Boolean);
   return `Edit this photo: ${edits.join("; ")}. ${guards.join(" ")}`;
 }

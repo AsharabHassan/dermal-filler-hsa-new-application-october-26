@@ -32,22 +32,8 @@ describe("/api/preview", () => {
     const prompt = String(form.get("prompt"));
     expect(prompt).toMatch(/without adding roundness/);
     expect(prompt).toMatch(/Do not change the lips at all/);
+    // gpt-image treats a mask as a hint only; the client confines the result instead.
     expect(form.get("mask")).toBeNull();
-  });
-
-  it("passes the focus-zone mask to the image edit when the client sends one", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "test-key");
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ data: [{ b64_json: "ZWRpdA==" }] }), { status: 200 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    vi.spyOn(console, "info").mockImplementation(() => {});
-    const res = await POST(req({ ...body, maskBase64: "bWFzaw==" }));
-    expect(res.status).toBe(200);
-    const form = fetchMock.mock.calls[0][1].body as FormData;
-    const mask = form.get("mask") as File;
-    expect(mask.type).toBe("image/png");
-    expect(String(form.get("prompt"))).toMatch(/transparent area of the mask/);
   });
 
   it("requires consent and at least one focus zone, and never blocks on failure", async () => {
