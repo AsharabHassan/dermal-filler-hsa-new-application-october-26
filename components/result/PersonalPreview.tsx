@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useWizard } from "@/store/wizard-store";
 import { aiAfterImage, previewAvailable } from "@/lib/ai-preview";
+import { estimatedProgress } from "@/lib/preview-progress";
 import { ZONES, joinNames } from "@/lib/zones";
 import { BeforeAfterSlider } from "./BeforeAfterSlider";
 import type { AnalyzeResult, ZoneKey } from "@/lib/types";
@@ -34,6 +35,15 @@ export function PersonalPreview({ result }: { result: AnalyzeResult }) {
   const zones = useMemo(() => previewZones(result), [result]);
   const [state, setState] = useState<State>("checking");
   const [after, setAfter] = useState<{ src: string; ratio: string } | null>(null);
+  const [progress, setProgress] = useState(0);
+
+  // Estimated progress while the model works; 100 only once the picture is in.
+  useEffect(() => {
+    if (state !== "loading") return;
+    const started = Date.now();
+    const id = window.setInterval(() => setProgress(estimatedProgress(Date.now() - started)), 250);
+    return () => window.clearInterval(id);
+  }, [state]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,10 +57,12 @@ export function PersonalPreview({ result }: { result: AnalyzeResult }) {
         return;
       }
       if (cancelled) return;
+      setProgress(0);
       setState("loading");
       const img = await aiAfterImage(imageBase64, imageMediaType, zones, sex, landmarks);
       if (cancelled) return;
       if (img) {
+        setProgress(100);
         setAfter({ src: img.dataUrl, ratio: `${img.width} / ${img.height}` });
         setState("ready");
       } else {
@@ -78,11 +90,34 @@ export function PersonalPreview({ result }: { result: AnalyzeResult }) {
         {state === "ready" && after ? (
           <BeforeAfterSlider beforeSrc={before} afterSrc={after.src} area="your photo" ratio={after.ratio} />
         ) : (
-          <div className="grid aspect-[4/5] place-items-center rounded-2xl bg-cream-deep/70 px-6 text-center">
-            <p className="flex flex-col items-center gap-3 text-sm text-body">
-              <Loader2 size={22} className="animate-spin text-peach-deep" />
-              Creating your personal illustration. This can take up to a minute; the rest of your report is ready below.
-            </p>
+          <div
+            className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-cream-deep/70"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+            aria-label="Creating your before and after"
+          >
+            {/* The client's own photo, dimmed, with the estimate on top. */}
+            <img src={before} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40 blur-[2px]" />
+            <div className="absolute inset-0 grid place-items-center bg-cream/60 px-6 text-center">
+              <div className="w-full max-w-[260px]">
+                <p className="flex items-center justify-center gap-2 text-[13px] font-medium uppercase tracking-[0.14em] text-peach-deep">
+                  <Loader2 size={16} className="animate-spin" />
+                  Creating your before &amp; after
+                </p>
+                <p className="mt-3 font-serif text-[56px] leading-none text-heading tabular-nums">{progress}%</p>
+                <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/80 ring-1 ring-peach/30">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-peach-light to-peach transition-[width] duration-300 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <p className="mt-3 text-[12.5px] leading-relaxed text-body">
+                  Usually about 30 seconds. The rest of your report is ready below.
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
