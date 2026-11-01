@@ -6,8 +6,13 @@
 // checked against it (luminance-layout correlation + overall brightness): if the
 // model moved the face, reframed or relit the photo, it is rejected and the
 // preview stays hidden. A preview must never misrepresent the result.
+// A faithful edit is then applied only inside soft masks around the focus
+// zones, and only as a broad shape/shading change (lib/preview-mask.ts), so the
+// model's skin retouching never reaches the client.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { NormalizedPoint } from "@/components/scan/useFaceLandmarker";
+import { blendBroadChange, previewMaskEllipses } from "@/lib/preview-mask";
 import type { Sex, ZoneKey } from "@/lib/types";
 
 const GRID = 48;
@@ -73,6 +78,52 @@ export async function previewAvailable(): Promise<boolean> {
   }
 }
 
+/** Low-pass copy: shrink then enlarge, which keeps shape and shading but drops pores and spots. */
+function lowPass(src: CanvasImageSource, w: number, h: number): Uint8ClampedArray {
+  const sw = Math.max(16, Math.round(w / 14));
+  const sh = Math.max(16, Math.round(h / 14));
+  const small = document.createElement("canvas");
+  small.width = sw;
+  small.height = sh;
+  const sctx = small.getContext("2d")!;
+  sctx.imageSmoothingQuality = "high";
+  sctx.drawImage(src, 0, 0, w, h, 0, 0, sw, sh);
+  const big = document.createElement("canvas");
+  big.width = w;
+  big.height = h;
+  const bctx = big.getContext("2d")!;
+  bctx.imageSmoothingQuality = "high";
+  bctx.drawImage(small, 0, 0, w, h);
+  return bctx.getImageData(0, 0, w, h).data;
+}
+
+/** One 0–255 value per pixel: soft-edged ellipses around the focus zones. */
+function zoneMask(zones: ZoneKey[], lm: NormalizedPoint[], w: number, h: number): Uint8ClampedArray {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d")!;
+  ctx.globalCompositeOperation = "lighten";
+  for (const e of previewMaskEllipses(zones, lm)) {
+    const rx = e.rx * w;
+    const ry = e.ry * h;
+    ctx.save();
+    ctx.translate(e.cx * w, e.cy * h);
+    ctx.scale(1, ry / rx);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    g.addColorStop(0, "#fff");
+    g.addColorStop(0.55, "#fff");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(-rx, -rx, rx * 2, rx * 2);
+    ctx.restore();
+  }
+  const rgba = ctx.getImageData(0, 0, w, h).data;
+  const mask = new Uint8ClampedArray(w * h);
+  for (let p = 0; p < mask.length; p++) mask[p] = Math.round((rgba[p * 4] * rgba[p * 4 + 3]) / 255);
+  return mask;
+}
+
 export interface AfterImage {
   dataUrl: string;
   width: number;
@@ -87,7 +138,10 @@ export function aiAfterImage(
   imageMediaType: string,
   zones: ZoneKey[],
   sex: Sex | null,
+  landmarks: NormalizedPoint[] | null,
 ): Promise<AfterImage | null> {
+  // Without the face mesh the edit can't be confined to the zones, so no preview.
+  if (!landmarks) return Promise.resolve(null);
   const key = `${imageBase64.length}:${imageBase64.slice(-64)}:${zones.join(",")}:${sex ?? ""}`;
   if (cache?.key === key) return cache.promise;
   const promise = (async () => {
@@ -114,7 +168,21 @@ export function aiAfterImage(
         console.warn("[preview] AI edit rejected: drifted from the original photo");
         return null;
       }
-      return { dataUrl: c.toDataURL("image/jpeg", 0.92), width: w, height: h };
+      const o = document.createElement("canvas");
+      o.width = w;
+      o.height = h;
+      const octx = o.getContext("2d")!;
+      octx.drawImage(orig, 0, 0, w, h);
+      const original = octx.getImageData(0, 0, w, h);
+      const blended = blendBroadChange(
+        original.data,
+        lowPass(orig, w, h),
+        lowPass(c, w, h),
+        zoneMask(zones, landmarks, w, h),
+      );
+      original.data.set(blended);
+      octx.putImageData(original, 0, 0);
+      return { dataUrl: o.toDataURL("image/jpeg", 0.92), width: w, height: h };
     } catch {
       return null;
     }
