@@ -49,10 +49,18 @@ const ZONE_LOOK: Record<ZoneKey, string> = {
     "the jaw edge from the chin to the angle below each ear reads as one clean, straight, well-lit line, the soft pocket at the jowl is gone, and the shadow under the jaw is crisp",
 };
 
+/**
+ * "plain" = instruction only; "after" = framed as the after-photo of a
+ * before/after comparison with concrete outcomes; "strong" = "after" plus a
+ * third more than a typical result. Calibrated live on 2 Nov 2026: "strong"
+ * at quality "high" gave the clearest natural change; xhigh added ~10 s and
+ * cost for no visible gain.
+ */
 export const PROMPT_STYLES = ["plain", "after", "strong"] as const;
 export type PromptStyle = (typeof PROMPT_STYLES)[number];
+export const DEFAULT_PROMPT_STYLE: PromptStyle = "strong";
 
-export function buildPreviewPrompt(zones: ZoneKey[], sex: Sex | null, style: PromptStyle = "plain"): string {
+export function buildPreviewPrompt(zones: ZoneKey[], sex: Sex | null, style: PromptStyle = DEFAULT_PROMPT_STYLE): string {
   const unique = Array.from(new Set(zones)).slice(0, 3);
   const edits = unique.map((z) => (sex === "man" ? MALE_EDIT[z] : undefined) ?? ZONE_EDIT[z]);
   const looks = unique.map((z) => ZONE_LOOK[z]);

@@ -36,4 +36,13 @@ describe("preview prompt strength", () => {
     expect(p).toMatch(/pigmentation/);
     expect(p).toMatch(/Change nothing outside the areas named/);
   });
+
+  it("defaults to the calibrated strong after-photo framing", () => {
+    const p = buildPreviewPrompt(["lips"], "woman");
+    expect(p).toMatch(/^You are producing the AFTER photo/);
+    expect(p).toMatch(/a third stronger than a typical treatment/);
+    expect(p).toMatch(/defined cupid's bow/);
+    expect(buildPreviewPrompt(["lips"], "woman", "plain")).toMatch(/^Edit this photo/);
+    expect(buildPreviewPrompt(["lips"], "woman", "plain")).not.toMatch(/a third stronger/);
+  });
 });
