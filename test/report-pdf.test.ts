@@ -5,7 +5,7 @@ import { DISCLAIMER } from "@/lib/constants";
 const SAMPLE: ReportInput = {
   clinicName: "Harley Street Aesthetics",
   byline: "London · Only GMC-registered doctors inject",
-  addressLines: ["1-5 Portpool Lane", "London EC1N 7UU"],
+  addressLines: ["2 Grosvenor Gardens, London SW1W 0DH", "10 Harley Street, London W1G 9PF"],
   email: "hello@harleystreetaesthetic.co.uk",
   bookingUrl: "harleystreetaesthetic.co.uk/london/contact/",
   preparedFor: "Jane",

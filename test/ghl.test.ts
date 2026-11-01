@@ -74,7 +74,7 @@ describe("buildGhlPayload", () => {
       source: "Facial Volume Scan · London",
       clinicLocation: "london",
       clinicLocationLabel: "London",
-      clinicAddress: "1-5 Portpool Lane, London EC1N 7UU",
+      clinicAddress: "2 Grosvenor Gardens, London SW1W 0DH, 10 Harley Street, London W1G 9PF",
       fillerHistory: "no",
       fillerHistoryLabel: "No",
       priority: "less_tired",

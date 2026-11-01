@@ -1,6 +1,6 @@
 # HSA Facial Volume Scan · Harley Street Aesthetics
 
-Dermal-fillers analyzer for **Harley Street Aesthetics** (London: 1-5 Portpool Lane, EC1N 7UU · Glasgow: Ingram House). Big idea: **"Still you."** Restore what time took, nothing it didn't.
+Dermal-fillers analyzer for **Harley Street Aesthetics** (London: 2 Grosvenor Gardens, SW1W 0DH and 10 Harley Street, W1G 9PF · Glasgow: Ingram House). Big idea: **"Still you."** Restore what time took, nothing it didn't.
 
 A visitor answers three questions ("Which best describes you?" Woman / Man / Prefer not to say, "Had filler before?", "What matters most?"), confirms they are 18+, ticks the required "I'm requesting a free consultation" box, and takes a selfie. **HSA SkinScan** (the clinic's own model server) plus Claude Sonnet map eight zones — temples, tear trough, cheeks, nasolabial, lips, marionette, chin, jawline — as *Well supported / Some change / Noticeable change*. The report (step 2 of 4) shows explicit **leave-alone** zones, explains causes, gives an honest non-filler line when skin firmness dominates (Nu Sculpt / skin quality), and previews a conservative plan with "from" prices and the current 4 ml offer. No beauty, age or attractiveness score anywhere.
 
@@ -71,7 +71,7 @@ The local `.env.local` was copied from the under-eye app with every live GHL / M
 - `lib/zones.ts` — change → status thresholds (30 / 60), leave-alone logic + sentences, cause notes, firmness-dominant rule.
 - `lib/plan.ts` — support-first plan order, staging (nasolabial / tear trough wait for cheeks, marionette for chin/jaw), max 3 starting areas, offer fit, previous-filler lines.
 - `lib/constants.ts` — **only** place for prices, starting volumes, the offer, addresses, disclaimer.
-- `lib/copy-guard.ts` + `test/copy-rules.test.ts` — banned words (perfect, flawless, painless, no risk, transform, toxin/anti-wrinkle, brand names, 10 Harley Street, beauty/age score…) scanned across all UI source; Claude's text is also checked at runtime and swapped for safe copy.
+- `lib/copy-guard.ts` + `test/copy-rules.test.ts` — banned words (perfect, flawless, painless, no risk, transform, toxin/anti-wrinkle, brand names, Portpool Lane (old address), beauty/age score…) scanned across all UI source; Claude's text is also checked at runtime and swapped for safe copy.
 - `lib/prompts/system-fillers.ts` — byte-stable cached system prompt.
 
 GHL tags: `dermal-fillers-analyzer`, `hsa-dermal-fillers-app`, `hsa-clinic-{london|glasgow}`, `hsa-consultation-call-requested`, `hsa-call-{morning|afternoon|evening}`, `hsa-meta-consent-{accepted|declined}`, plus `fillers-history-*`, `fillers-priority-*`, `fillers-focus-{zone}`, `fillers-firmness-first`, `fillers-review-previous-work`, `fillers-offer-4ml`. Payload includes `zoneMap`, `planSummary`, `fillerHistoryLabel`, `priorityLabel`, `ageConfirmed`.

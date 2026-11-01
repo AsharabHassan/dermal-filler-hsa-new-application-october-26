@@ -85,7 +85,7 @@ export function HeroScreen() {
         <TrustMarkers className="max-w-lg" />
         <p className="flex max-w-sm items-start justify-center gap-1.5 text-center text-xs leading-relaxed text-body/65">
           <MapPin size={13} className="mt-0.5 shrink-0 text-peach" />
-          {city ? clinic.lines.join(" · ") : "Clinics in London (Portpool Lane, EC1) & Glasgow (Ingram House)"}
+          {city ? clinic.lines.join(" · ") : "Clinics in London (Belgravia & Harley Street) & Glasgow (Ingram House)"}
         </p>
       </motion.div>
     </section>

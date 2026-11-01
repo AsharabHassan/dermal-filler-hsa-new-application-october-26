@@ -17,7 +17,7 @@ export const FORBIDDEN_PATTERNS: { label: string; re: RegExp }[] = [
   { label: "limited time", re: /\blimited[- ]time\b|\bhurry\b|\bends (tonight|soon)\b/i },
   { label: "toxin", re: /\bbotox\b|\banti[- ]?wrinkle\b|\btoxin\b|\bbotulinum\b/i },
   { label: "brand", re: /juv[eé]derm|\bsosum\b|restylane|teoxane|profhilo/i },
-  { label: "old address", re: /10 Harley Street|Grosvenor Gardens/i },
+  { label: "old address", re: /Portpool Lane|EC1N 7UU/i },
   { label: "beauty score", re: /\b(beauty|attractiveness|age) score\b|\battractive(ness)?\b|\bugly\b/i },
   { label: "age estimate", re: /\byou look (\d+|older|younger)\b|\byears? younger\b/i },
   { label: "permanent", re: /\bpermanent(ly)?\b/i },

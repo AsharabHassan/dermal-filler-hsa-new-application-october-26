@@ -87,7 +87,7 @@ describe("copy rules — no forbidden words in user-facing copy", () => {
       "anti-wrinkle injections",
       "Juvéderm",
       "Sosum",
-      "10 Harley Street",
+      "1-5 Portpool Lane",
       "your beauty score",
       "limited time only",
     ]) {
@@ -101,8 +101,10 @@ describe("compliance details", () => {
     expect(DISCLAIMER).toBe("Not a diagnosis. Suitability confirmed at your consultation. Results vary.");
   });
 
-  it("uses the Portpool Lane London address", () => {
-    expect(CLINIC.locations[0].lines.join(", ")).toBe("1-5 Portpool Lane, London EC1N 7UU");
+  it("uses both London addresses as published on the website", () => {
+    expect(CLINIC.locations[0].lines.join(" · ")).toBe(
+      "2 Grosvenor Gardens, London SW1W 0DH · 10 Harley Street, London W1G 9PF",
+    );
     expect(CLINIC.locations[1].lines.join(" ")).toMatch(/Ingram House/);
   });
 
