@@ -4,6 +4,36 @@ import { buildResult, type AnalyzeResponse } from "@/lib/assessment";
 import { SkinScanError, skinScanFillers } from "@/lib/skinscan";
 import { isZoneKey } from "@/lib/zones";
 import { buildMeasurements } from "@/lib/measurements";
+import { reportAgreement } from "@/lib/skinscan-agreement";
+import type { FillerSignals } from "@/lib/skinscan";
+import type { PhotoAssessment } from "@/lib/types";
+
+/**
+ * SkinScan agreement log (no effect on the result). Per visible zone: SkinScan
+ * "high" vs Claude change >= 50; plus SkinScan laxity >= 0.5 vs Claude laxity >= 50.
+ * Logging thresholds only; raw values are stored so they can be re-cut later.
+ */
+function logAgreement(signals: FillerSignals, a: PhotoAssessment, notVisible: string[]): void {
+  const agree: Record<string, boolean> = {};
+  const scanHints: Record<string, string> = {};
+  const claudeChange: Record<string, number> = {};
+  for (const [zone, hint] of Object.entries(signals.zone_hints ?? {})) {
+    const read = isZoneKey(zone) ? a.zones[zone] : undefined;
+    if (!hint || !read || notVisible.includes(zone) || a.zonesObscured.includes(zone as never)) continue;
+    scanHints[zone] = hint;
+    claudeChange[zone] = read.change;
+    agree[`agree_${zone}`] = (hint === "high") === (read.change >= 50);
+  }
+  const lax = signals.combined?.laxity_proxy;
+  if (typeof lax === "number") agree.agree_laxity = (lax >= 0.5) === (a.skinLaxity >= 50);
+  if (!Object.keys(agree).length) return;
+  reportAgreement(
+    "fillers",
+    { zoneHints: scanHints, laxity: lax ?? null, version: signals.version },
+    { zoneChange: claudeChange, skinLaxity: a.skinLaxity, jowlGrade: a.jowlGrade },
+    agree,
+  );
+}
 
 export const runtime = "nodejs";
 // SkinScan /fillers (Derm Foundation on CPU ~19 s, one retry) + Claude.
@@ -65,6 +95,7 @@ export async function POST(request: Request): Promise<Response> {
     // Zones SkinScan found outside the photo frame are never read, whatever
     // Claude says: they are checked at the consultation instead.
     const notVisible = (signals.zones_not_visible ?? []).filter(isZoneKey);
+    if (assessment.framingAdequate) logAgreement(signals, assessment, notVisible);
     assessment.zonesObscured = Array.from(new Set([...assessment.zonesObscured, ...notVisible]));
     const result = buildResult(assessment, {
       fillerHistory,
